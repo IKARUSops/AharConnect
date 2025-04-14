@@ -4,16 +4,7 @@ import { Box } from '@mui/material';
 import logo from '../../assests/logo.png'; // Ensure the path is correct and the file exists
 
 
-// export function SitemarkIcon() {
-//   return (
-//     <Box
-//       component="img"
-//       src={logo}
-//       alt="Sitemark Logo"
-//       sx={{ height: 21, width: 100, mr: 2 }}
-//     />
-//   );
-// }
+
 
 export function SitemarkIcon() {
   return (
