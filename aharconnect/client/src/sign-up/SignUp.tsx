@@ -16,6 +16,8 @@ import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from './components/CustomIcons';
+import { Link as RouterLink } from 'react-router-dom';
+
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -218,13 +220,25 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
             <Typography sx={{ textAlign: 'center' }}>
               Already have an account?{' '}
               <Link
+                  component={RouterLink}
+                  to="/sign-in"
+                  variant="body2"
+                  sx={{ alignSelf: 'center' }}
+                >
+                  Sign in
+              </Link>
+            </Typography>
+
+            {/* <Typography sx={{ textAlign: 'center' }}>
+              Already have an account?{' '}
+              <Link
                 href="/material-ui/getting-started/templates/sign-in/"
                 variant="body2"
                 sx={{ alignSelf: 'center' }}
               >
                 Sign in
               </Link>
-            </Typography>
+            </Typography> */}
           </Box>
         </Card>
       </SignUpContainer>
