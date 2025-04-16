@@ -105,25 +105,64 @@ export default function SignUp(props) {
     return isValid;
   };
 
-  const handleSubmit = (event) => {
-    if (nameError || emailError || passwordError) {
-      event.preventDefault();
-      return;
-    }
+  // const handleSubmit = (event) => {
+  //   if (nameError || emailError || passwordError) {
+  //     event.preventDefault();
+  //     return;
+  //   }
+  //   const data = new FormData(event.currentTarget);
+  //   alert(JSON.stringify({
+  //     name: data.get('name'),
+  //     lastName: data.get('lastName'),
+  //     email: data.get('email'),
+  //     password: data.get('password'),
+  //   }))
+  //   console.log({
+  //     name: data.get('name'),
+  //     lastName: data.get('lastName'),
+  //     email: data.get('email'),
+  //     password: data.get('password'),
+  //   });
+  // };
+  const handleSubmit = async (event) => {
+    event.preventDefault(); // Prevent default form action
+  
+    if (!validateInputs()) return;
+  
     const data = new FormData(event.currentTarget);
-    alert(JSON.stringify({
+  
+    const payload = {
       name: data.get('name'),
-      lastName: data.get('lastName'),
       email: data.get('email'),
       password: data.get('password'),
-    }))
-    console.log({
-      name: data.get('name'),
-      lastName: data.get('lastName'),
-      email: data.get('email'),
-      password: data.get('password'),
-    });
+    };
+  
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        alert('✅ Registration successful!');
+        console.log('Success:', result);
+        // Optionally redirect to login page
+        // navigate('/sign-in');
+      } else {
+        alert(`❌ Error: ${result.message || 'Something went wrong.'}`);
+        console.error('Error:', result);
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      alert('❌ Failed to connect to the server.');
+    }
   };
+  
 
   return (
     <AppTheme {...props}>

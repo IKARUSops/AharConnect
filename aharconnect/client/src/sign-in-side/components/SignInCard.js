@@ -48,17 +48,55 @@ export default function SignInCard() {
     setOpen(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     if (emailError || passwordError) {
       event.preventDefault();
       return;
     }
+    // const data = new FormData(event.currentTarget);
+    // console.log({
+    //   email: data.get('email'),
+    //   password: data.get('password'),
+    // });
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-    });
+
+  const userData = {
+    email: data.get('email'),
+    password: data.get('password'),
   };
+
+  try {
+    
+    const response = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Handle successful login, e.g., store token, redirect user
+      console.log('Login successful:', result);
+      // Example: store token in localStorage
+      localStorage.setItem('authToken', result.token);
+      // Redirect user to dashboard or home page
+      window.location.href = '/dashboard';
+      alert('Login successful! Redirecting to dashboard...');
+    } else {
+      // Handle error (incorrect credentials or other issues)
+      console.error('Login failed:', result.message);
+      // Display error message, e.g., incorrect email/password
+    }
+  } catch (error) {
+    console.error('Error during sign-in:', error);
+    // Optionally display an error message to the user
+  }
+};
+
+
 
   const validateInputs = () => {
     const email = document.getElementById('email');
@@ -83,7 +121,7 @@ export default function SignInCard() {
       setPasswordError(false);
       setPasswordErrorMessage('');
     }
-
+    
     return isValid;
   };
 
