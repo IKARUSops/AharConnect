@@ -3,8 +3,13 @@ import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import SignInSide from './sign-in-side/SignInSide';
 import Signup from './sign-up/SignUp';  
+import CustomNavbar from "./common-components/CustomNavbar";
+
 function App() {
   return (
+    <>  
+    <CustomNavbar />
+
     <Routes>
       <Route path="/" element={<SignInSide />} />
       {/* <Route path="/about" element={<About />} /> */}
@@ -12,6 +17,7 @@ function App() {
       <Route path="/sign-in" element={<SignInSide />} />
       <Route path="/sign-up" element={<Signup />} />
     </Routes>
+    </>
     // <div className="App">
     //   <header className="App-header">
     //     <img src={logo} className="App-logo" alt="logo" />

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import SvgIcon from '@mui/material/SvgIcon';
 import { Box } from '@mui/material';
-import logo from '../../assests/logo.png'; // Ensure the path is correct and the file exists
+import logo from '../../assets/logo.png'; // Ensure the path is correct and the file exists
 
 
 

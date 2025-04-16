@@ -111,6 +111,12 @@ export default function SignUp(props) {
       return;
     }
     const data = new FormData(event.currentTarget);
+    alert(JSON.stringify({
+      name: data.get('name'),
+      lastName: data.get('lastName'),
+      email: data.get('email'),
+      password: data.get('password'),
+    }))
     console.log({
       name: data.get('name'),
       lastName: data.get('lastName'),
@@ -194,6 +200,7 @@ export default function SignUp(props) {
               onClick={validateInputs}
             >
               Sign up
+              
             </Button>
           </Box>
           <Divider>
