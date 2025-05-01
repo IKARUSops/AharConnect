@@ -1,6 +1,11 @@
 .custom-navbar {
     padding: 10px;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 74, 117, 0.432);
+    max-width: 80%;
+    margin: 0 auto;
+    border-radius: 25px;
+    /* opacity: 0.5; */
+    backdrop-filter: blur(10px);
 }
 
 .brand-text {
@@ -8,12 +13,16 @@
     font-size: 1.5em;
     font-weight: bold;
     vertical-align: middle;
+    margin-top: 40px;
+    padding-top: 40px;
 }
 
 .nav-link {
     color: #fff !important;
     margin-right: 15px;
     transition: color 0.3s ease;
+    font-size: 1.5em;
+    font-weight: 500;
 }
 
 .nav-link:hover {

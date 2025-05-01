@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import SignInSide from './sign-in-side/SignInSide';
 import Signup from './sign-up/SignUp';  
 import CustomNavbar from "./common-components/CustomNavbar";
+import Expenses from './Sprints/Sprint-1/Expenses/Expenses';
 
 function App() {
   return (
@@ -16,6 +17,14 @@ function App() {
       {/* <Route path="register" element={<Signup />}></Route> */}
       <Route path="/sign-in" element={<SignInSide />} />
       <Route path="/sign-up" element={<Signup />} />
+      <Route path="/expenses" element={<Expenses />} />
+      {/* <Route path="/sign-up" element={<SignUp />} /> */}
+      {/* <Route path="/sign-in" element={<SignInSide />} /> */}
+      {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
+      {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+      {/* <Route path="/profile" element={<Profile />} /> */}
+      {/* <Route path="/settings" element={<Settings />} /> */}
+      {/* <Route path="*" element={<NotFound />} /> */}
     </Routes>
     </>
     // <div className="App">

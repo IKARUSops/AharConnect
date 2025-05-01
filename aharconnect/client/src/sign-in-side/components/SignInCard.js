@@ -83,7 +83,7 @@ export default function SignInCard() {
       // Example: store token in localStorage
       localStorage.setItem('authToken', result.token);
       // Redirect user to dashboard or home page
-      window.location.href = '/dashboard';
+      window.location.href = '/expenses';
       alert('Login successful! Redirecting to dashboard...');
     } else {
       // Handle error (incorrect credentials or other issues)
@@ -193,7 +193,7 @@ export default function SignInCard() {
           label="Remember me"
         />
         <ForgotPassword open={open} handleClose={handleClose} />
-        <Button type="submit" fullWidth variant="contained" onClick={validateInputs}>
+        <Button type="submit" fullWidth variant="contained" >
           Sign in
         </Button>
         {/* <Typography sx={{ textAlign: 'center' }}>
