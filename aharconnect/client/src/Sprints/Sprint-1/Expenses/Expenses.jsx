@@ -26,7 +26,7 @@ export default function Expenses(props: { disableCustomTheme?: boolean }) {
             '&::before': {
               content: '""',
               display: 'block',
-              position: 'absolute',
+              position: 'fixed',
               zIndex: -1,
               inset: 0,
               backgroundImage:
@@ -35,6 +35,7 @@ export default function Expenses(props: { disableCustomTheme?: boolean }) {
               ...theme.applyStyles('dark', {
                 backgroundImage:
                   'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
+                  backgroundAttachment: 'fixed',
               }),
             },
           }),

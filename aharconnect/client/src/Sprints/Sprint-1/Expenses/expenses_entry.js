@@ -295,7 +295,6 @@ const ExpenseTrackingDashboard = () => {
             </Box>
           </Paper>
         </Grid>
-
         {/* Expense Table */}
         <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
@@ -340,6 +339,8 @@ const ExpenseTrackingDashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+
+
 
       {/* Add/Edit Expense Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
