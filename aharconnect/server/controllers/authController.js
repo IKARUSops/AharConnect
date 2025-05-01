@@ -39,3 +39,12 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// exports.logout = async (req, res) => {
+//   try {
+//     // If using token invalidation, implement logic here (e.g., blacklist the token)
+//     res.status(200).json({ message: 'Logout successful' });
+//   } catch (err) {
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };

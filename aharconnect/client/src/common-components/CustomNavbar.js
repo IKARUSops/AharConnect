@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Navbar.css';
 import logo from '../assets/logo.png'; // update path if needed
+import { logout } from '../api/auth';
 
 function CustomNavbar() {
     return (
@@ -28,6 +29,7 @@ function CustomNavbar() {
                         <Nav.Link as={Link} to="/#visuals">How It Works</Nav.Link>
                         <Nav.Link as={Link} to="/expenses">Expenses</Nav.Link>
                         <Nav.Link as={Link} to="/auth">Get Started</Nav.Link>
+                        <Nav.Link onClick={logout} style={{ cursor: 'pointer', color: 'red' }}>Logout</Nav.Link>
                     </Nav>
                 </Navbar.Collapse>
             </Container>

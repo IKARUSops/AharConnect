@@ -1,6 +1,7 @@
 // controllers/expenseController.js
 const Expense = require('../models/Expense');
 const moment = require('moment');
+const mongoose = require('mongoose');
 
 // Get expenses with time range filter
 exports.getExpenses = async (req, res) => {
@@ -110,34 +111,41 @@ exports.getStatistics = async (req, res) => {
 
     switch (timeRange) {
       case 'daily':
-        dateFilter = { $gte: today.toDate() };
+        dateFilter = { $gte: today.toDate(), $lte: today.endOf('day').toDate() };
         break;
       case 'weekly':
-        dateFilter = { $gte: today.startOf('week').toDate() };
+        dateFilter = { $gte: today.startOf('week').toDate(), $lte: today.endOf('week').toDate() };
         break;
       case 'monthly':
-        dateFilter = { $gte: today.startOf('month').toDate() };
+        dateFilter = { $gte: today.startOf('month').toDate(), $lte: today.endOf('month').toDate() };
         break;
       default:
         dateFilter = {};
     }
 
+    console.log('User ID:', userId);
+    console.log('Date Filter:', dateFilter);
+
     // Get total expenses
     const totalExpenses = await Expense.aggregate([
-      { $match: { user: mongoose.Types.ObjectId(userId), date: dateFilter } },
+      { $match: { user: new mongoose.Types.ObjectId(userId), date: dateFilter } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
+    console.log('Total Expenses:', totalExpenses);
+
     // Get expenses by category
     const categoryBreakdown = await Expense.aggregate([
-      { $match: { user: mongoose.Types.ObjectId(userId), date: dateFilter } },
+      { $match: { user: new mongoose.Types.ObjectId(userId), date: dateFilter } },
       { $group: { _id: '$category', total: { $sum: '$amount' } } },
       { $sort: { total: -1 } }
     ]);
 
+    console.log('Category Breakdown:', categoryBreakdown);
+
     // Get daily trends
     const dailyTrends = await Expense.aggregate([
-      { $match: { user: mongoose.Types.ObjectId(userId), date: dateFilter } },
+      { $match: { user: new mongoose.Types.ObjectId(userId), date: dateFilter } },
       {
         $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
@@ -146,6 +154,8 @@ exports.getStatistics = async (req, res) => {
       },
       { $sort: { _id: 1 } }
     ]);
+
+    console.log('Daily Trends:', dailyTrends);
 
     res.json({
       success: true,
@@ -156,6 +166,7 @@ exports.getStatistics = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in getStatistics:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

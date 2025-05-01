@@ -40,7 +40,10 @@ API.interceptors.response.use(
 // Auth API
 export const signupUser = (userData) => API.post('/auth/signup', userData);
 export const signinUser = (userData) => API.post('/auth/login', userData);
-
+export const logout = () => {
+  localStorage.removeItem('authToken'); // Clear the token
+  window.location.href = '/sign-in'; // Redirect to the login page
+};
 // Expense API
 export const getExpenses = (timeRange) => API.get(`/expenses?timeRange=${timeRange}`);
 export const createExpense = (expenseData) => API.post('/expenses', expenseData);
