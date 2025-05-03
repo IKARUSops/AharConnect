@@ -3,11 +3,10 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
 import AppTheme from '../../../shared-theme/AppTheme';
 import ColorModeSelect from '../../../shared-theme/ColorModeSelect';
-// import SignInCard from '../../components/SignInCard';
-// import Content from '../../../sign-in-side/components/Content';
-import ExpenseTrackingDashboard from './expenses_entry';
 
-export default function Expenses(props: { disableCustomTheme?: boolean }) {
+import MenuDashboard from './Menuedit';
+
+export default function MenuEditDashboard(props: { disableCustomTheme?: boolean }) {
   return (
     <AppTheme {...props}>
       <CssBaseline enableColorScheme />
@@ -59,8 +58,8 @@ export default function Expenses(props: { disableCustomTheme?: boolean }) {
               m: 'auto',
             }}
           >
-            <ExpenseTrackingDashboard />
-            {/* <SignInCard /> */}
+            <MenuDashboard />
+           
           </Stack>
         </Stack>
       </Stack>

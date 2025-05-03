@@ -33,6 +33,7 @@ function CustomNavbar() {
                         <Nav.Link as={Link} to="/#features">Features</Nav.Link>
                         <Nav.Link as={Link} to="/#visuals">How It Works</Nav.Link>
                         <Nav.Link as={Link} to="/expenses">Expenses</Nav.Link>
+                        <Nav.Link as={Link} to="/menu-edit">Menu</Nav.Link>
                         {loggedIn ? (
                             <Nav.Link onClick={logout} style={{ cursor: 'pointer', color: 'red' }}>Logout</Nav.Link>
                         ) : (

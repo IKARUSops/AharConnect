@@ -77,7 +77,7 @@ export default function SignInCard() {
       if (response.ok) {
         console.log('Login successful:', result);
         localStorage.setItem('authToken', result.token);
-        window.location.href = '/expenses';
+        window.location.href = '/menu-edit';
         alert('Login successful! Redirecting to dashboard...');
       } else {
         alert(result.error || 'Login failed. Please try again.');

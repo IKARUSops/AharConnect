@@ -5,6 +5,7 @@ import SignInSide from './sign-in-side/SignInSide';
 import Signup from './sign-up/SignUp';  
 import CustomNavbar from "./common-components/CustomNavbar";
 import Expenses from './Sprints/Sprint-1/Expenses/Expenses';
+import MenuEditDashboard from './Sprints/Sprint-1/Menu/Menu';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route path="/sign-in" element={<SignInSide />} />
       <Route path="/sign-up" element={<Signup />} />
       <Route path="/expenses" element={<Expenses />} />
+      <Route path="/menu-edit" element={<MenuEditDashboard />} />
       {/* <Route path="/sign-up" element={<SignUp />} /> */}
       {/* <Route path="/sign-in" element={<SignInSide />} /> */}
       {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
