@@ -4,13 +4,17 @@ const jwt = require('jsonwebtoken');
 
 exports.signup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, type } = req.body;
+
+    if (!['Restaurant', 'Foodie'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid user type' });
+    }
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ error: 'Email already in use' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword });
+    const newUser = new User({ name, email, password: hashedPassword, type });
     await newUser.save();
 
     res.status(201).json({ message: 'User registered successfully' });
@@ -22,10 +26,14 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, type } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+    if (!['Restaurant', 'Foodie'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid user type' });
+    }
+
+    const user = await User.findOne({ email, type });
+    if (!user) return res.status(400).json({ error: 'No user found. Please check your email, password, and user type.' });
 
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) return res.status(400).json({ error: 'Invalid credentials' });

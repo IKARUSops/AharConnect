@@ -44,6 +44,10 @@ export const logout = () => {
   localStorage.removeItem('authToken'); // Clear the token
   window.location.href = '/sign-in'; // Redirect to the login page
 };
+export const isAuthenticated = () => {
+  const token = localStorage.getItem('authToken');
+  return !!token; // Returns true if token exists, false otherwise
+};
 // Expense API
 export const getExpenses = (timeRange) => API.get(`/expenses?timeRange=${timeRange}`);
 export const createExpense = (expenseData) => API.post('/expenses', expenseData);

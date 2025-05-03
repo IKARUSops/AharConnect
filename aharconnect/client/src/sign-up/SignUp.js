@@ -105,25 +105,6 @@ export default function SignUp(props) {
     return isValid;
   };
 
-  // const handleSubmit = (event) => {
-  //   if (nameError || emailError || passwordError) {
-  //     event.preventDefault();
-  //     return;
-  //   }
-  //   const data = new FormData(event.currentTarget);
-  //   alert(JSON.stringify({
-  //     name: data.get('name'),
-  //     lastName: data.get('lastName'),
-  //     email: data.get('email'),
-  //     password: data.get('password'),
-  //   }))
-  //   console.log({
-  //     name: data.get('name'),
-  //     lastName: data.get('lastName'),
-  //     email: data.get('email'),
-  //     password: data.get('password'),
-  //   });
-  // };
   const handleSubmit = async (event) => {
     event.preventDefault(); // Prevent default form action
   
@@ -135,6 +116,7 @@ export default function SignUp(props) {
       name: data.get('name'),
       email: data.get('email'),
       password: data.get('password'),
+      type: data.get('type'),
     };
   
     try {
@@ -227,6 +209,21 @@ export default function SignUp(props) {
                 helperText={passwordErrorMessage}
                 color={passwordError ? 'error' : 'primary'}
               />
+            </FormControl>
+            <FormControl>
+              <FormLabel htmlFor="type">User Type</FormLabel>
+              <TextField
+                select
+                required
+                fullWidth
+                id="type"
+                name="type"
+                SelectProps={{ native: true }}
+              >
+                <option value="">Select user type</option>
+                <option value="Restaurant">Restaurant</option>
+                <option value="Foodie">Foodie</option>
+              </TextField>
             </FormControl>
             <FormControlLabel
               control={<Checkbox value="allowExtraEmails" color="primary" />}

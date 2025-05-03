@@ -60,6 +60,7 @@ export default function SignInCard() {
     const userData = {
       email: data.get('email'),
       password: data.get('password'),
+      type: data.get('type'),
     };
 
     try {
@@ -79,7 +80,8 @@ export default function SignInCard() {
         window.location.href = '/expenses';
         alert('Login successful! Redirecting to dashboard...');
       } else {
-        console.error('Login failed:', result.message);
+        alert(result.error || 'Login failed. Please try again.');
+        return;
       }
     } catch (error) {
       console.error('Error during sign-in:', error);
@@ -175,6 +177,21 @@ export default function SignInCard() {
             variant="outlined"
             color={passwordError ? 'error' : 'primary'}
           />
+        </FormControl>
+        <FormControl>
+          <FormLabel htmlFor="type">User Type</FormLabel>
+          <TextField
+            select
+            required
+            fullWidth
+            id="type"
+            name="type"
+            SelectProps={{ native: true }}
+          >
+            <option value="">Select user type</option>
+            <option value="Restaurant">Restaurant</option>
+            <option value="Foodie">Foodie</option>
+          </TextField>
         </FormControl>
         <FormControlLabel
           control={<Checkbox value="remember" color="primary" />}
