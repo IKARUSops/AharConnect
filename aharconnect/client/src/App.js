@@ -16,6 +16,7 @@ import CheckoutPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/CheckoutPage"
 import EventSpacesPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventSpacesPage";
 import EventBookingPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventBookingPage";
 import EventMessagePage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventMessagePage";
+import RestaurantDashboard from "./Sprints/Sprint-2/RestaurantDashboard/RestaurantDashboard";
 import { CartProvider } from "./Sprints/Sprint-1/Faiyaz/context/CartContext";
 
 // Commented out imports for missing files
@@ -51,6 +52,9 @@ function App() {
             <Route path="/events" element={<EventSpacesPage />} />
             <Route path="/events/book/:id" element={<EventBookingPage />} />
             <Route path="/events/message/:id" element={<EventMessagePage />} />
+            
+            {/* Restaurant Dashboard Route */}
+            <Route path="/restaurant-dashboard" element={<RestaurantDashboard />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             {/* Commented out routes for missing files */}

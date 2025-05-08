@@ -77,7 +77,8 @@ export default function SignInCard() {
       if (response.ok) {
         console.log('Login successful:', result);
         localStorage.setItem('authToken', result.token);
-        window.location.href = '/menu-edit';
+        localStorage.setItem('userType', userData.type.toLowerCase()); // Store user type in lowercase
+        window.location.href = userData.type.toLowerCase() === 'restaurant' ? '/restaurant-dashboard' : '/restaurants';
         alert('Login successful! Redirecting to dashboard...');
       } else {
         alert(result.error || 'Login failed. Please try again.');

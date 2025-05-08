@@ -42,6 +42,7 @@ export const signupUser = (userData) => API.post('/auth/signup', userData);
 export const signinUser = (userData) => API.post('/auth/login', userData);
 export const logout = () => {
   localStorage.removeItem('authToken'); // Clear the token
+  localStorage.removeItem('userType'); // Clear the user type
   window.location.href = '/sign-in'; // Redirect to the login page
 };
 export const isAuthenticated = () => {

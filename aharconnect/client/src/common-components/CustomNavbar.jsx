@@ -8,15 +8,20 @@ import { logout, isAuthenticated } from '../api/auth';
 
 function CustomNavbar() {
     const [loggedIn, setLoggedIn] = useState(false);
+    const [userType, setUserType] = useState(null);
     const location = useLocation();
 
     useEffect(() => {
         setLoggedIn(isAuthenticated());
+        // Get user type from localStorage or your auth context
+        const storedUserType = localStorage.getItem('userType');
+        setUserType(storedUserType);
     }, []);
 
     const handleLogout = () => {
         logout();
         setLoggedIn(false);
+        setUserType(null);
     };
 
     return (
@@ -44,17 +49,15 @@ function CustomNavbar() {
                             Event Spaces
                         </Nav.Link>
 
-                        {/* Management Routes - Only visible when logged in */}
-                        {loggedIn && (
-                            <NavDropdown title="Management" id="management-dropdown">
-                                <NavDropdown.Item as={Link} to="/expenses">
-                                    Expenses
-                                </NavDropdown.Item>
-                                <NavDropdown.Item as={Link} to="/menu-edit">
-                                    Menu
-                                </NavDropdown.Item>
-                                {/* Add more management routes here */}
-                            </NavDropdown>
+                        {/* Restaurant Dashboard - Only visible when logged in as restaurant */}
+                        {loggedIn && userType === 'restaurant' && (
+                            <Nav.Link 
+                                as={Link} 
+                                to="/restaurant-dashboard" 
+                                className={location.pathname === '/restaurant-dashboard' ? 'active' : ''}
+                            >
+                                Dashboard
+                            </Nav.Link>
                         )}
 
                         {/* Authentication */}

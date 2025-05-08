@@ -51,7 +51,7 @@ const CheckoutPage = () => {
                           <Box component="span" sx={{ fontWeight: 'medium' }}>
                             {item.quantity} x{' '}
                           </Box>
-                          {item.menuItem?.name || 'Unknown'}
+                      {item.menuItem?.name || 'Unknown'}
                         </Typography>
                       </Box>
                       <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
