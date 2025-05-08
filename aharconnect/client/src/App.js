@@ -2,6 +2,9 @@ import logo from './logo.svg';
 import './App.css';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import CssBaseline from '@mui/material/CssBaseline';
+import AppTheme from './shared-theme/AppTheme';
+import ColorModeSelect from './shared-theme/ColorModeSelect';
 import SignInSide from './sign-in-side/SignInSide';
 import Signup from './sign-up/SignUp';  
 import CustomNavbar from "./common-components/CustomNavbar";
@@ -28,35 +31,35 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        <>  
-        <CustomNavbar />
-
-        <Routes>
-          <Route path="/" element={<SignInSide />} />
-          {/* <Route path="/about" element={<About />} /> */}
-          {/* <Route path="register" element={<Signup />}></Route> */}
-          <Route path="/sign-in" element={<SignInSide />} />
-          <Route path="/sign-up" element={<Signup />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/menu-edit" element={<MenuEditDashboard />} />
-          <Route path="/restaurants" element={<RestaurantsPage />} />
-          <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          
-          {/* Event Booking Routes */}
-          <Route path="/events" element={<EventSpacesPage />} />
-          <Route path="/events/book/:id" element={<EventBookingPage />} />
-          <Route path="/events/message/:id" element={<EventMessagePage />} />
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          {/* Commented out routes for missing files */}
-          {/* <Route path="/" element={<Index />} /> */}
-          {/* <Route path="/restaurant-dashboard" element={<RestaurantDashboardPage />} /> */}
-          {/* <Route path="/restaurant/reservations" element={<ReservationsManagementPage />} /> */}
-          {/* <Route path="*" element={<NotFound />} /> */}
-
-        </Routes>
-        </>
+        <AppTheme>
+          <CssBaseline enableColorScheme />
+          <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
+          <CustomNavbar />
+          <Routes>
+            <Route path="/" element={<SignInSide />} />
+            {/* <Route path="/about" element={<About />} /> */}
+            {/* <Route path="register" element={<Signup />}></Route> */}
+            <Route path="/sign-in" element={<SignInSide />} />
+            <Route path="/sign-up" element={<Signup />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/menu-edit" element={<MenuEditDashboard />} />
+            <Route path="/restaurants" element={<RestaurantsPage />} />
+            <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            
+            {/* Event Booking Routes */}
+            <Route path="/events" element={<EventSpacesPage />} />
+            <Route path="/events/book/:id" element={<EventBookingPage />} />
+            <Route path="/events/message/:id" element={<EventMessagePage />} />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* Commented out routes for missing files */}
+            {/* <Route path="/" element={<Index />} /> */}
+            {/* <Route path="/restaurant-dashboard" element={<RestaurantDashboardPage />} /> */}
+            {/* <Route path="/restaurant/reservations" element={<ReservationsManagementPage />} /> */}
+            {/* <Route path="*" element={<NotFound />} /> */}
+          </Routes>
+        </AppTheme>
       </CartProvider>
     </QueryClientProvider>
   );

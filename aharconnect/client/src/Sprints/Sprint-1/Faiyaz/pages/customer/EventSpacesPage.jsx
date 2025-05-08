@@ -11,7 +11,6 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import AppTheme from '../../../../../shared-theme/AppTheme';
 import { CssBaseline, Stack } from '@mui/material';
-import ColorModeSelect from '../../../../../shared-theme/ColorModeSelect';
 
 // Mock event spaces data
 const mockEventSpaces = [
@@ -126,7 +125,6 @@ const EventSpacesPage = () => {
             <div className="ahar-container">
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
                 <h1 className="text-4xl font-bold">Find the Perfect Event Space</h1>
-                <ColorModeSelect />
               </Stack>
               
               <div className="mb-8">
