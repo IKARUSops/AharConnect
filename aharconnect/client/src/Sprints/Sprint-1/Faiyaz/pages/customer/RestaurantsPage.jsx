@@ -3,13 +3,12 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
 import AppTheme from '../../../../../shared-theme/AppTheme';
 import ColorModeSelect from '../../../../../shared-theme/ColorModeSelect';
-import Input from '../../components/ui/input';
-import Button from '../../components/ui/button';
+import { TextField, Button, Container, Typography, Box, Chip, Paper, IconButton, InputAdornment } from '@mui/material';
 import { RestaurantCard } from '../../components/ui/restaurant-card';
 import { mockRestaurants } from '../../lib/mock-data';
 import Layout from '../../components/layout/Layout';
 import LocationBasedRestaurants from '../../components/customer/LocationBasedRestaurants';
-import { Filter } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 
 /**
  * @param {Object} props
@@ -66,10 +65,8 @@ const RestaurantsPage = (props) => {
         component="main"
         sx={[
           {
-            justifyContent: 'center',
-            height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
-            marginTop: 'max(40px - var(--template-frame-height, 0px), 0px)',
             minHeight: '100%',
+            bgcolor: 'background.default',
           },
           (theme) => ({
             '&::before': {
@@ -90,104 +87,110 @@ const RestaurantsPage = (props) => {
           }),
         ]}
       >
-        <Stack
-          direction={{ xs: 'column-reverse', md: 'row' }}
-          sx={{
-            justifyContent: 'center',
-            gap: { xs: 6, sm: 12 },
-            p: 2,
-            mx: 'auto',
-            width: '100%'
-          }}
-        >
-          <div className="w-full">
-            <div className="bg-gradient-to-r from-purple-100 to-blue-100 py-12">
-              <div className="ahar-container">
-                <h1 className="text-4xl font-bold text-ahar-dark mb-6">Find Your Perfect Dining Experience</h1>
-                
-                <div className="mb-8">
-                  <LocationBasedRestaurants onLocationChange={handleLocationChange} />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="col-span-1 md:col-span-2 relative">
-                    <Input
-                      type="text"
-                      placeholder="Search restaurants, cuisines, or locations..."
-                      className="px-4 py-3 h-12 text-base"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                    />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <Button size="icon" variant="ghost">
-                        <Filter size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="col-span-1 flex space-x-2">
-                    <Button className="flex-1 bg-ahar-primary hover:bg-ahar-secondary">
-                      Search
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex items-center space-x-1"
-                      onClick={() => setShowFilterMobile(!showFilterMobile)}
-                    >
-                      <Filter size={16} className="mr-1" />
-                      <span>Filters</span>
-                    </Button>
-                  </div>
-                </div>
+        <Box sx={{ bgcolor: 'primary.light', py: 6 }}>
+          <Container maxWidth="lg">
+            <Typography variant="h3" component="h1" sx={{ mb: 4, fontWeight: 'bold', color: 'text.primary' }}>
+              Find Your Perfect Dining Experience
+            </Typography>
+            
+            <Box sx={{ mb: 4 }}>
+              <LocationBasedRestaurants onLocationChange={handleLocationChange} />
+            </Box>
+            
+            <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'background.paper' }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  fullWidth
+                  placeholder="Search restaurants, cuisines, or locations..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={20} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowFilterMobile(!showFilterMobile)}>
+                          <Filter size={20} />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  sx={{ minWidth: 120 }}
+                >
+                  Search
+                </Button>
+              </Stack>
+            </Paper>
 
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handleFilterChange(null)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${selectedFilter === null ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                  >
-                    All Restaurants
-                  </button>
-                  {cuisineTypes.map((cuisine, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleFilterChange(cuisine)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${selectedFilter === cuisine ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                    >
-                      {cuisine}
-                    </button>
-                  ))}
-                  {priceRanges.map((price, index) => (
-                    <button
-                      key={`price-${index}`}
-                      onClick={() => handleFilterChange(price)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${selectedFilter === price ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                    >
-                      {price}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+              <Chip
+                label="All Restaurants"
+                onClick={() => handleFilterChange(null)}
+                color={selectedFilter === null ? "primary" : "default"}
+                variant={selectedFilter === null ? "filled" : "outlined"}
+                sx={{ borderRadius: '20px' }}
+              />
+              {cuisineTypes.map((cuisine, index) => (
+                <Chip
+                  key={index}
+                  label={cuisine}
+                  onClick={() => handleFilterChange(cuisine)}
+                  color={selectedFilter === cuisine ? "primary" : "default"}
+                  variant={selectedFilter === cuisine ? "filled" : "outlined"}
+                  sx={{ borderRadius: '20px' }}
+                />
+              ))}
+              {priceRanges.map((price, index) => (
+                <Chip
+                  key={`price-${index}`}
+                  label={price}
+                  onClick={() => handleFilterChange(price)}
+                  color={selectedFilter === price ? "primary" : "default"}
+                  variant={selectedFilter === price ? "filled" : "outlined"}
+                  sx={{ borderRadius: '20px' }}
+                />
+              ))}
+            </Box>
+          </Container>
+        </Box>
 
-            <div className="ahar-container py-12">
-              <h2 className="text-2xl font-semibold mb-6">
-                {filteredRestaurants.length} Restaurants Found near {location}
-              </h2>
+        <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Typography variant="h5" component="h2" sx={{ mb: 4, fontWeight: 'medium' }}>
+            {filteredRestaurants.length} Restaurants Found near {location}
+          </Typography>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRestaurants.map(restaurant => (
-                  <RestaurantCard key={restaurant.id} restaurant={restaurant} />
-                ))}
-              </div>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: {
+              xs: '1fr',
+              md: 'repeat(2, 1fr)',
+              lg: 'repeat(3, 1fr)'
+            },
+            gap: 3
+          }}>
+            {filteredRestaurants.map(restaurant => (
+              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+            ))}
+          </Box>
 
-              {filteredRestaurants.length === 0 && (
-                <div className="text-center py-12">
-                  <h3 className="text-xl font-medium text-gray-600">No restaurants found</h3>
-                  <p className="mt-2 text-gray-500">Try adjusting your filters or search term.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </Stack>
+          {filteredRestaurants.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No restaurants found
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Try adjusting your filters or search term.
+              </Typography>
+            </Box>
+          )}
+        </Container>
       </Stack>
     </AppTheme>
   );

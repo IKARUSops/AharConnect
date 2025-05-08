@@ -1,56 +1,121 @@
 import React from "react";
-import { Card, CardContent, CardFooter } from "../../components/ui/card";
-import Button from '../../components/ui/button';
+import { Card, CardContent, CardMedia, CardActions, Typography, Box, Chip, Rating, Button } from "@mui/material";
 import { Link } from "react-router-dom";
 
 export function RestaurantCard({ restaurant }) {
   return (
-    <Card className="overflow-hidden h-full flex flex-col transition-all duration-200 hover:shadow-lg">
-      <div className="h-48 overflow-hidden">
-        <img
-          src={restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop'}
-          alt={restaurant.name}
-          className="w-full h-full object-cover transition-all duration-500 hover:scale-105"
-        />
-      </div>
-      <CardContent className="flex-grow p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-lg">{restaurant.name}</h3>
+    <Card 
+      sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: (theme) => theme.shadows[4],
+        },
+      }}
+    >
+      <CardMedia
+        component="img"
+        height="200"
+        image={restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop'}
+        alt={restaurant.name}
+        sx={{
+          objectFit: 'cover',
+          transition: 'transform 0.3s',
+          '&:hover': {
+            transform: 'scale(1.05)',
+          },
+        }}
+      />
+      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+            {restaurant.name}
+          </Typography>
           {restaurant.rating && (
-            <div className="flex items-center bg-yellow-100 px-2 py-1 rounded text-yellow-800 text-sm">
-              <span className="mr-1">★</span>
-              {restaurant.rating.toFixed(1)}
-            </div>
+            <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'warning.light', px: 1, py: 0.5, borderRadius: 1 }}>
+              <Rating value={restaurant.rating} precision={0.5} size="small" readOnly />
+              <Typography variant="body2" sx={{ ml: 0.5, color: 'warning.dark' }}>
+                {restaurant.rating.toFixed(1)}
+              </Typography>
+            </Box>
           )}
-        </div>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{restaurant.description}</p>
-        <div className="flex flex-wrap gap-2 mb-3">
+        </Box>
+        
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ 
+            mb: 2,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {restaurant.description}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
           {restaurant.cuisineType.map((cuisine, index) => (
-            <span
+            <Chip
               key={index}
-              className="px-2 py-1 bg-ahar-soft-purple text-ahar-tertiary text-xs rounded-full"
-            >
-              {cuisine}
-            </span>
+              label={cuisine}
+              size="small"
+              sx={{ 
+                bgcolor: 'primary.light',
+                color: 'primary.dark',
+                '&:hover': {
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                },
+              }}
+            />
           ))}
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <div className="text-muted-foreground">{restaurant.priceRange}</div>
+        </Box>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            {restaurant.priceRange}
+          </Typography>
           {restaurant.openingHours && (
-            <div className="text-muted-foreground">
+            <Typography variant="body2" color="text.secondary">
               {restaurant.openingHours.opening} - {restaurant.openingHours.closing}
-            </div>
+            </Typography>
           )}
-        </div>
+        </Box>
       </CardContent>
-      <CardFooter className="p-6 pt-0 flex gap-2">
-        <Button asChild variant="outline" className="flex-1">
-          <Link to={`/restaurants/${restaurant.id}`}>View Menu</Link>
+      
+      <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
+        <Button
+          component={Link}
+          to={`/restaurants/${restaurant.id}`}
+          variant="outlined"
+          fullWidth
+          sx={{ 
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+          }}
+        >
+          View Menu
         </Button>
-        <Button asChild className="flex-1 bg-[#B48CF0] hover:bg-[#9B6FE0] text-white font-medium shadow-sm hover:shadow-md transition-all">
-          <Link to={`/restaurants/${restaurant.id}/reserve`} className="text-white">Reserve</Link>
+        <Button
+          component={Link}
+          to={`/restaurants/${restaurant.id}/reserve`}
+          variant="contained"
+          fullWidth
+          sx={{ 
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+          }}
+        >
+          Reserve
         </Button>
-      </CardFooter>
+      </CardActions>
     </Card>
   );
 }

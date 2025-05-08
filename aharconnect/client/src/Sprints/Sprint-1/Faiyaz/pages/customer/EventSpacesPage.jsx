@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Users, CalendarCheck, Filter } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
-import Input from '../../components/ui/input';
-import Button from '../../components/ui/button';
-import Separator from '../../components/ui/separator';
-import { Badge } from '../../components/ui/badge';
-import Layout from '../../components/layout/Layout';
+import { MapPin, Users, CalendarCheck, Filter, Search } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardMedia, 
+  CardActions, 
+  Typography, 
+  Box, 
+  Chip, 
+  Button, 
+  Container, 
+  Stack, 
+  TextField, 
+  IconButton, 
+  InputAdornment,
+  Paper,
+  Grid
+} from '@mui/material';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import AppTheme from '../../../../../shared-theme/AppTheme';
-import { CssBaseline, Stack } from '@mui/material';
+import { CssBaseline } from '@mui/material';
+import Layout from '../../components/layout/Layout';
 
 // Mock event spaces data
 const mockEventSpaces = [
@@ -96,12 +108,10 @@ const EventSpacesPage = () => {
   const { data: eventSpaces = mockEventSpaces } = useQuery({
     queryKey: ['eventSpaces'],
     queryFn: async () => {
-      // In a real app, this would be an API call
       return mockEventSpaces;
     }
   });
 
-  // Filter event spaces based on search term and capacity
   const filteredEventSpaces = eventSpaces.filter(space => {
     const matchesSearch = space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          space.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,186 +131,230 @@ const EventSpacesPage = () => {
       <CssBaseline />
       <Layout>
         <Stack direction="column" spacing={2}>
-          <div className="bg-gradient-to-r from-purple-100 to-blue-100 py-12">
-            <div className="ahar-container">
+          <Box sx={{ bgcolor: 'primary.light', py: 6 }}>
+            <Container maxWidth="lg">
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
-                <h1 className="text-4xl font-bold">Find the Perfect Event Space</h1>
+                <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  Find the Perfect Event Space
+                </Typography>
               </Stack>
               
-              <div className="mb-8">
-                <p className="text-lg mb-4">Looking for a venue for your next special occasion? Browse our collection of event spaces available for booking.</p>
-              </div>
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                  Looking for a venue for your next special occasion? Browse our collection of event spaces available for booking.
+                </Typography>
+              </Box>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="col-span-1 md:col-span-2 relative">
-                  <Input
-                    type="text"
+              <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'background.paper' }}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                  <TextField
+                    fullWidth
                     placeholder="Search by venue name, features or restaurant..."
-                    className="px-4 py-3 h-12 text-base"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search size={20} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton>
+                            <Filter size={20} />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <Button size="icon" variant="ghost">
-                      <Filter size={16} />
-                    </Button>
-                  </div>
-                </div>
-                <div className="col-span-1">
-                  <Button className="w-full bg-primary hover:bg-primary/90">
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    sx={{ minWidth: 120 }}
+                  >
                     Search
                   </Button>
-                </div>
-              </div>
+                </Stack>
+              </Paper>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                <button
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                <Chip
+                  label="All Sizes"
                   onClick={() => setCapacityFilter(null)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === null ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  All Sizes
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(50)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 50 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  50+ People
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(100)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 100 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  100+ People
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(150)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 150 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  150+ People
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(200)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 200 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  200+ People
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(250)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 250 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  250+ People
-                </button>
-                <button
-                  onClick={() => setCapacityFilter(300)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors border ${capacityFilter === 300 ? 'bg-[#B48CF2] text-white border-transparent' : 'bg-white text-black border-[#B48CF2] hover:bg-[#f3eaff]'}`}
-                >
-                  300+ People
-                </button>
-              </div>
-            </div>
-          </div>
+                  color={capacityFilter === null ? "primary" : "default"}
+                  variant={capacityFilter === null ? "filled" : "outlined"}
+                  sx={{ borderRadius: '20px' }}
+                />
+                {[50, 100, 150, 200, 250, 300].map((capacity) => (
+                  <Chip
+                    key={capacity}
+                    label={`${capacity}+ People`}
+                    onClick={() => setCapacityFilter(capacity)}
+                    color={capacityFilter === capacity ? "primary" : "default"}
+                    variant={capacityFilter === capacity ? "filled" : "outlined"}
+                    sx={{ borderRadius: '20px' }}
+                  />
+                ))}
+              </Box>
+            </Container>
+          </Box>
 
-          <div className="ahar-container py-12">
-            <Stack spacing={3}>
-              <h2 className="text-2xl font-semibold">
-                {filteredEventSpaces.length} Event Spaces Found in {location}
-              </h2>
+          <Container maxWidth="lg" sx={{ py: 6 }}>
+            <Typography variant="h5" component="h2" sx={{ mb: 4, fontWeight: 'medium' }}>
+              {filteredEventSpaces.length} Event Spaces Found in {location}
+            </Typography>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {filteredEventSpaces.map(space => (
-                  <Card key={space.id} className="overflow-hidden">
-                    <div className="h-64 overflow-hidden relative">
-                      <img
-                        src={space.images[0]}
+            <Grid container spacing={4}>
+              {filteredEventSpaces.map(space => (
+                <Grid item xs={12} lg={6} key={space.id}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: (theme) => theme.shadows[4],
+                      },
+                    }}
+                  >
+                    <Box sx={{ position: 'relative', height: 256 }}>
+                      <CardMedia
+                        component="img"
+                        height="256"
+                        image={space.images[0]}
                         alt={space.name}
-                        className="w-full h-full object-cover"
+                        sx={{ objectFit: 'cover' }}
                       />
                       {space.availability === 'Booked' && (
-                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-                          <span className="text-white text-2xl font-bold">Currently Booked</span>
-                        </div>
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            bgcolor: 'rgba(0, 0, 0, 0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Typography variant="h5" color="white" fontWeight="bold">
+                            Currently Booked
+                          </Typography>
+                        </Box>
                       )}
-                    </div>
+                    </Box>
 
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-xl">{space.name}</CardTitle>
-                          <p className="text-gray-600">{space.restaurantName}</p>
-                        </div>
-                        <Badge variant={space.availability === 'Available' ? 'default' : 'outline'} className="text-xs">
-                          {space.availability}
-                        </Badge>
-                      </div>
-                    </CardHeader>
+                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box>
+                          <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
+                            {space.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {space.restaurantName}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={space.availability}
+                          color={space.availability === 'Available' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Box>
 
-                    <CardContent className="space-y-4">
-                      <p className="text-gray-600 line-clamp-2">{space.description}</p>
-                      
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center">
-                          <Users size={16} className="mr-1" />
-                          <span>Up to {space.capacity} people</span>
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin size={16} className="mr-1" />
-                          <span>{space.address}</span>
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div>
-                        <p className="font-medium text-sm mb-2">Amenities:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {space.amenities.slice(0, 3).map((amenity, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {amenity}
-                            </Badge>
-                          ))}
-                          {space.amenities.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{space.amenities.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-baseline justify-between">
-                        <div className="text-xl font-semibold">
-                          ${space.pricePerHour.toFixed(2)} <span className="text-sm font-normal">/ hour</span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Min. {space.minHours} hours
-                        </div>
-                      </div>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          mb: 2,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {space.description}
+                      </Typography>
+
+                      <Stack direction="row" spacing={3} sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+                          <Users size={16} style={{ marginRight: 8 }} />
+                          <Typography variant="body2">
+                            Up to {space.capacity} people
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+                          <MapPin size={16} style={{ marginRight: 8 }} />
+                          <Typography variant="body2">
+                            {space.address}
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {space.amenities.map((amenity, index) => (
+                          <Chip
+                            key={index}
+                            label={amenity}
+                            size="small"
+                            sx={{ 
+                              bgcolor: 'primary.light',
+                              color: 'primary.dark',
+                              '&:hover': {
+                                bgcolor: 'primary.main',
+                                color: 'primary.contrastText',
+                              },
+                            }}
+                          />
+                        ))}
+                      </Box>
                     </CardContent>
 
-                    <CardFooter className="flex justify-between">
-                      <Button variant="outline" onClick={() => toast.info(`View more photos of ${space.name}`)}>
-                        More Photos
-                      </Button>
-                      <Button 
-                        asChild
-                        disabled={space.availability === 'Booked'}
+                    <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
+                      <Button
+                        component={Link}
+                        to={`/event-spaces/${space.id}`}
+                        variant="outlined"
+                        fullWidth
+                        sx={{ 
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontWeight: 500,
+                        }}
                       >
-                        <Link to={`/events/book/${space.id}`}>
-                          Book This Space
-                        </Link>
+                        View Details
                       </Button>
-                    </CardFooter>
+                      <Button
+                        component={Link}
+                        to={`/event-spaces/${space.id}/book`}
+                        variant="contained"
+                        fullWidth
+                        disabled={space.availability === 'Booked'}
+                        sx={{ 
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Book Now
+                      </Button>
+                    </CardActions>
                   </Card>
-                ))}
-              </div>
+                </Grid>
+              ))}
+            </Grid>
 
-              {filteredEventSpaces.length === 0 && (
-                <div className="text-center py-12">
-                  <h3 className="text-xl font-medium text-gray-600">No event spaces found</h3>
-                  <p className="mt-2 text-gray-500">Try adjusting your filters or search term.</p>
-                </div>
-              )}
-            </Stack>
-          </div>
+            {filteredEventSpaces.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No event spaces found
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Try adjusting your filters or search term.
+                </Typography>
+              </Box>
+            )}
+          </Container>
         </Stack>
       </Layout>
     </AppTheme>
