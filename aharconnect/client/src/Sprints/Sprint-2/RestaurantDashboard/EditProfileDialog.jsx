@@ -15,7 +15,7 @@ import {
   MenuItem,
   Grid,
 } from '@mui/material';
-import axios from 'axios';
+import API from '../../../api/auth';
 
 const EditProfileDialog = ({ open, onClose, initialData, onSuccess }) => {
   const [profileData, setProfileData] = useState(initialData || {
@@ -57,36 +57,36 @@ const EditProfileDialog = ({ open, onClose, initialData, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put('http://localhost:5000/api/restaurants/profile', profileData);
-      setSuccess('Profile updated successfully!');
-      setTimeout(() => {
-        onSuccess(profileData);
-        onClose();
-      }, 1500);
+      const response = await API.put('/restaurants/profile', profileData);
+      onSuccess(response.data);
+      setSuccess('Profile updated successfully');
     } catch (error) {
-      setError(error.response?.data?.error || 'Failed to update profile');
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile');
     }
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append('restaurantImage', file);
+    if (!file) return;
 
-      try {
-        const response = await axios.post('http://localhost:5000/api/restaurants/upload-photo', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        setProfileData(prev => ({
-          ...prev,
-          image: response.data.photoUrl
-        }));
-      } catch (error) {
-        setError('Failed to upload image');
-      }
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await API.post('/menu', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setProfileData(prev => ({
+        ...prev,
+        image: response.data.imagePath
+      }));
+      setSuccess('Image uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Failed to upload image');
     }
   };
 

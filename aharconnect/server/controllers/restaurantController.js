@@ -136,7 +136,7 @@ exports.updateProfile = async (req, res) => {
           capacity,
           image
         },
-        { new: true }
+        { new: true, upsert: true }
       );
     } else {
       // Create new profile
@@ -187,34 +187,25 @@ exports.uploadImage = async (req, res) => {
 // Upload restaurant photo
 exports.uploadPhoto = async (req, res) => {
   try {
-    upload(req, res, async function(err) {
-      if (err) {
-        return res.status(400).json({ message: err });
-      }
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-      }
+    const restaurant = await Restaurant.findOne({ user: req.user._id });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found' });
+    }
 
-      const restaurantId = req.user.restaurantId; // Assuming you have user info in req.user
-      const photoUrl = `/uploads/restaurants/${req.file.filename}`;
+    const photoUrl = `/uploads/restaurants/${req.file.filename}`;
+    restaurant.image = photoUrl;
+    await restaurant.save();
 
-      const restaurant = await Restaurant.findByIdAndUpdate(
-        restaurantId,
-        { image: photoUrl },
-        { new: true }
-      );
-
-      if (!restaurant) {
-        return res.status(404).json({ message: 'Restaurant not found' });
-      }
-
-      res.json({ 
-        message: 'Photo uploaded successfully',
-        photoUrl: photoUrl
-      });
+    res.json({ 
+      message: 'Photo uploaded successfully',
+      photoUrl: photoUrl
     });
   } catch (error) {
+    console.error('Image upload error:', error);
     res.status(500).json({ message: error.message });
   }
 };
