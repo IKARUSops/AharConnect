@@ -3,17 +3,17 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import RestaurantsPage from "./pages/customer/RestaurantsPage";
-import RestaurantDetailPage from "./pages/customer/RestaurantDetailPage";
-import CheckoutPage from "./pages/customer/CheckoutPage";
-import RestaurantDashboardPage from "./pages/restaurant/RestaurantDashboardPage";
-import ReservationsManagementPage from "./pages/restaurant/ReservationsManagementPage";
-import EventSpacesPage from "./pages/customer/EventSpacesPage";
-import EventBookingPage from "./pages/customer/EventBookingPage";
-import EventMessagePage from "./pages/customer/EventMessagePage";
-import { CartProvider } from "./context/CartContext";
+import Index from "../../Faiyaz/pages/Index";
+import NotFound from "../../Faiyaz/pages/NotFound";
+import RestaurantsPage from "../../Faiyaz/pages/customer/RestaurantsPage";
+import RestaurantDetailPage from "../../Faiyaz/pages/customer/RestaurantDetailPage";
+import CheckoutPage from "../../Faiyaz/pages/customer/CheckoutPage";
+import RestaurantDashboardPage from "../../Faiyaz/pages/restaurant/RestaurantDashboardPage";
+import ReservationsManagementPage from "../../Faiyaz/pages/restaurant/ReservationsManagementPage";
+import EventSpacesPage from "../../Faiyaz/pages/customer/EventSpacesPage";
+import EventBookingPage from "../../Faiyaz/pages/customer/EventBookingPage";
+import EventMessagePage from "../../Faiyaz/pages/customer/EventMessagePage";
+import { CartProvider } from "../../Faiyaz/context/CartContext";
 
 const queryClient = new QueryClient();
 

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Grid, Paper, Button, TextField, MenuItem, FormControl, InputLabel, Select, Typography, Switch, FormControlLabel } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
+import CssBaseline from '@mui/material/CssBaseline';
+import Stack from '@mui/material/Stack';
+import AppTheme from '../../../shared-theme/AppTheme';
+import ColorModeSelect from '../../../shared-theme/ColorModeSelect';
 import axios from 'axios';
 
 const MenuDashboard = () => {
@@ -133,129 +137,163 @@ const MenuDashboard = () => {
   const pageSizeOptions = [5, 10, 20, 100]; // Add 100 to pageSizeOptions
 
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom sx={{ mt: 3, mb: 2, fontWeight: 'bold' }}>
-        Menu Dashboard
-      </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => {
-          setOpenForm(true);
-          setEditId(null);
-          setFormData({ item_name: '', category: '', price: '', description: '', item_status: 'available' });
-        }}
-        sx={{ mb: 3 }}
+    <AppTheme>
+      <CssBaseline enableColorScheme />
+      <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
+      <Stack
+        direction="column"
+        component="main"
+        sx={[
+          {
+            justifyContent: 'center',
+            height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
+            marginTop: 'max(40px - var(--template-frame-height, 0px), 0px)',
+            minHeight: '100%',
+          },
+          (theme) => ({
+            '&::before': {
+              content: '""',
+              display: 'block',
+              position: 'fixed',
+              zIndex: -1,
+              inset: 0,
+              backgroundImage:
+                'radial-gradient(ellipse at 50% 50%, hsl(210, 100%, 97%), hsl(0, 0%, 100%))',
+              backgroundRepeat: 'no-repeat',
+              ...theme.applyStyles('dark', {
+                backgroundImage:
+                  'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
+                  backgroundAttachment: 'fixed',
+              }),
+            },
+          }),
+        ]}
       >
-        Add Item
-      </Button>
-      {openForm && (
-        <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  name="item_name"
-                  label="Item Name"
-                  value={formData.item_name}
-                  onChange={handleInputChange}
-                  required
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  name="price"
-                  label="Price (SAR)"
-                  type="number"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  required
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    label="Category"
-                    required
-                  >
-                    {categories.map(cat => (
-                      <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.item_status === 'available'}
-                      onChange={handleStatusChange}
-                      color="primary"
+        <Container>
+          <Typography variant="h4" gutterBottom sx={{ mt: 3, mb: 2, fontWeight: 'bold' }}>
+            Menu Dashboard
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setOpenForm(true);
+              setEditId(null);
+              setFormData({ item_name: '', category: '', price: '', description: '', item_status: 'available' });
+            }}
+            sx={{ mb: 3 }}
+          >
+            Add Item
+          </Button>
+          {openForm && (
+            <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+              <form onSubmit={handleSubmit}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      name="item_name"
+                      label="Item Name"
+                      value={formData.item_name}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
                     />
-                  }
-                  label="Item Status"
-                  labelPlacement="start"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  name="description"
-                  label="Description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={4}
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  style={{ display: 'block', marginBottom: '10px' }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
-                  Save
-                </Button>
-                <Button variant="outlined" onClick={() => setOpenForm(false)}>
-                  Cancel
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </Paper>
-      )}
-      {groupedItems.map(group => (
-        group.items.length > 0 && (
-          <div key={group.category}>
-            <Typography variant="h5" gutterBottom sx={{ mt: 3, fontWeight: 'bold' }}>
-              {group.category}
-            </Typography>
-            <Paper elevation={2} sx={{ height: 400, width: '100%', mb: 3, borderRadius: 2 }}>
-              <DataGrid
-                rows={group.items}
-                columns={columns}
-                pageSizeOptions={pageSizeOptions}
-                pagination
-                sx={{ border: 0 }}
-              />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      name="price"
+                      label="Price (SAR)"
+                      type="number"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Category</InputLabel>
+                      <Select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleInputChange}
+                        label="Category"
+                        required
+                      >
+                        {categories.map(cat => (
+                          <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.item_status === 'available'}
+                          onChange={handleStatusChange}
+                          color="primary"
+                        />
+                      }
+                      label="Item Status"
+                      labelPlacement="start"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      name="description"
+                      label="Description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      multiline
+                      rows={4}
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: 'block', marginBottom: '10px' }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
+                      Save
+                    </Button>
+                    <Button variant="outlined" onClick={() => setOpenForm(false)}>
+                      Cancel
+                    </Button>
+                  </Grid>
+                </Grid>
+              </form>
             </Paper>
-          </div>
-        )
-      ))}
-    </Container>
+          )}
+          {groupedItems.map(group => (
+            group.items.length > 0 && (
+              <div key={group.category}>
+                <Typography variant="h5" gutterBottom sx={{ mt: 3, fontWeight: 'bold' }}>
+                  {group.category}
+                </Typography>
+                <Paper elevation={2} sx={{ height: 400, width: '100%', mb: 3, borderRadius: 2 }}>
+                  <DataGrid
+                    rows={group.items}
+                    columns={columns}
+                    pageSizeOptions={pageSizeOptions}
+                    pagination
+                    sx={{ border: 0 }}
+                  />
+                </Paper>
+              </div>
+            )
+          ))}
+        </Container>
+      </Stack>
+    </AppTheme>
   );
 };
 

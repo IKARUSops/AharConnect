@@ -2,10 +2,10 @@
     padding: 10px;
     background-color: rgba(0, 74, 117, 0.432);
     max-width: 80%;
-    margin: 0 auto;
+    margin: 10px auto;
     border-radius: 25px;
-    /* opacity: 0.5; */
     backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .brand-text {
@@ -13,28 +13,98 @@
     font-size: 1.5em;
     font-weight: bold;
     vertical-align: middle;
-    margin-top: 40px;
-    padding-top: 40px;
+    margin-left: 10px;
 }
 
 .nav-link {
     color: #fff !important;
     margin-right: 15px;
-    transition: color 0.3s ease;
-    font-size: 1.5em;
+    transition: all 0.3s ease;
+    font-size: 1.1em;
     font-weight: 500;
+    padding: 8px 16px !important;
+    border-radius: 8px;
 }
 
 .nav-link:hover {
     color: #ff6600 !important;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-.ms-auto {
-    margin-left: auto !important;
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ff6600 !important;
 }
 
-@media (max-width: 768px) {
+.logout-link {
+    color: #ff4444 !important;
+}
+
+.logout-link:hover {
+    background-color: rgba(255, 68, 68, 0.1) !important;
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+    background-color: rgba(0, 74, 117, 0.9);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 12px;
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.dropdown-item {
+    color: #fff !important;
+    border-radius: 6px;
+    padding: 8px 16px;
+    margin: 4px 0;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ff6600 !important;
+}
+
+#management-dropdown {
+    color: #fff !important;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+    .custom-navbar {
+        max-width: 95%;
+        margin: 5px auto;
+    }
+
     .brand-text {
         font-size: 1.2em;
     }
+
+    .navbar-collapse {
+        background-color: rgba(0, 74, 117, 0.95);
+        border-radius: 15px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .nav-link {
+        padding: 10px !important;
+        margin: 5px 0;
+    }
+
+    .dropdown-menu {
+        background-color: rgba(0, 74, 117, 0.8);
+        margin-top: 0;
+    }
 }
+
+.custom-navbar img {
+    transition: transform 0.3s ease;
+  }
+  
+.custom-navbar img:hover {
+transform: scale(1.05);
+}
+  
