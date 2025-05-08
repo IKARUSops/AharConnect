@@ -58,9 +58,9 @@ const restaurantSchema = new mongoose.Schema({
   availableForEvents: {
     type: Boolean,
     default: false
-  }
+    }
 }, {
   timestamps: true
 });
-
+  
 module.exports = mongoose.model('Restaurant', restaurantSchema); 

@@ -16,4 +16,4 @@ router.post('/', authMiddleware, restaurantController.createRestaurant);
 router.put('/:id', authMiddleware, restaurantController.updateRestaurant);
 router.delete('/:id', authMiddleware, restaurantController.deleteRestaurant);
 
-module.exports = router; 
+module.exports = router;
