@@ -5,7 +5,7 @@ export const mockRestaurants = [
     description: 'Authentic Italian cuisine with a modern twist.',
     cuisineType: ['Italian'],
     priceRange: '$$$',
-    location: 'New York',
+    location: 'Gulshan 2, Dhaka, Bangladesh',
     rating: 4.5,
     openingHours: {
       opening: '11:00 AM',
@@ -19,7 +19,7 @@ export const mockRestaurants = [
     description: 'Traditional Japanese dishes and sushi.',
     cuisineType: ['Japanese'],
     priceRange: '$$',
-    location: 'New York',
+    location: 'Banani, Dhaka, Bangladesh',
     rating: 4.3,
     openingHours: {
       opening: '12:00 PM',
@@ -33,7 +33,7 @@ export const mockRestaurants = [
     description: 'Premium steaks and fine dining.',
     cuisineType: ['Steakhouse'],
     priceRange: '$$$$',
-    location: 'New York',
+    location: 'Dhanmondi, Dhaka, Bangladesh',
     rating: 4.7,
     openingHours: {
       opening: '4:00 PM',
@@ -41,6 +41,20 @@ export const mockRestaurants = [
     },
     image: 'https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=800&auto=format&fit=crop'
   },
+  {
+    id: '4',
+    name: "Omar's Recipe",
+    description: 'Authentic Bangladeshi cuisine.',
+    cuisineType: ['Bangladeshi'],
+    priceRange: '$$',
+    location: 'Dhaka Cantonment, Dhaka, Bangladesh',
+    rating: 4.6,
+    openingHours: {
+      opening: '11:00 AM',
+      closing: '10:00 PM'
+    },
+    image: 'https://images.unsplash.com/photo-1576577445504-6af96477db52?w=800&auto=format&fit=crop'
+  }
 ];
 
 export const mockMenuItems = [

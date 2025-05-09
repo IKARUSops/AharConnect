@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
 import AppTheme from '../../../../../shared-theme/AppTheme';
 import ColorModeSelect from '../../../../../shared-theme/ColorModeSelect';
 import { TextField, Button, Container, Typography, Box, Chip, Paper, IconButton, InputAdornment, useTheme } from '@mui/material';
 import { RestaurantCard } from '../../components/ui/restaurant-card';
-import { mockRestaurants } from '../../lib/mock-data';
 import Layout from '../../components/layout/Layout';
 import LocationBasedRestaurants from '../../components/customer/LocationBasedRestaurants';
+import LocationAutocomplete from '../../../../../components/customer/LocationAutocomplete';
 import { Filter, Search, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -20,8 +20,11 @@ const RestaurantsPage = (props) => {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState(null);
-  const [location, setLocation] = useState("New York");
+  const [location, setLocation] = useState(null);
   const [showFilterMobile, setShowFilterMobile] = useState(false);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
+  const [viewMode, setViewMode] = useState('all');
+  const [userCoordinates, setUserCoordinates] = useState(null);
 
   const { data: apiRestaurants = [] } = useQuery({
     queryKey: ['restaurants'],
@@ -36,34 +39,210 @@ const RestaurantsPage = (props) => {
     }
   });
 
-  const allRestaurants = [...mockRestaurants, ...apiRestaurants];
+  // Memoize allRestaurants to prevent recreation on every render
+  const allRestaurants = useMemo(() => [...apiRestaurants], [apiRestaurants]);
 
-  // Get all unique cuisine types from the combined data
-  const cuisineTypes = Array.from(
-    new Set(allRestaurants.flatMap(restaurant => restaurant.cuisineType))
+  // Memoize cuisine types and price ranges
+  const cuisineTypes = useMemo(() => 
+    Array.from(new Set(allRestaurants.flatMap(restaurant => restaurant.cuisineType))),
+    [allRestaurants]
   );
 
-  // Get all unique price ranges from the combined data
-  const priceRanges = Array.from(
-    new Set(allRestaurants.map(restaurant => restaurant.priceRange))
+  const priceRanges = useMemo(() =>
+    Array.from(new Set(allRestaurants.map(restaurant => restaurant.priceRange))),
+    [allRestaurants]
   );
 
-  const filteredRestaurants = allRestaurants.filter(restaurant => {
-    // Filter by search term
-    const matchesSearch = restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.cuisineType.some(cuisine => cuisine.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Function to calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  };
 
-    // Filter by selected filter
-    const matchesFilter = !selectedFilter || 
-      restaurant.cuisineType.includes(selectedFilter) ||
-      restaurant.priceRange === selectedFilter;
+  // Function to calculate address match score
+  const calculateAddressMatchScore = (restaurantAddress, searchLocation) => {
+    if (!restaurantAddress || !searchLocation) return 0;
+    
+    // Convert both addresses to lowercase for comparison
+    const restAddress = restaurantAddress.toLowerCase();
+    const searchAddr = searchLocation.toLowerCase();
+    
+    console.log('Matching addresses:', {
+      restaurant: restAddress,
+      search: searchAddr
+    });
 
-    return matchesSearch && matchesFilter;
-  });
+    // Important areas in Dhaka
+    const dhakaAreas = [
+      'dhaka',
+      'cantonment',
+      'gulshan',
+      'banani',
+      'dhanmondi',
+      'mirpur',
+      'uttara',
+      'mohakhali',
+      'tejgaon',
+      'motijheel'
+    ];
+
+    let score = 0;
+
+    // Check if both addresses mention Dhaka
+    if (restAddress.includes('dhaka') && searchAddr.includes('dhaka')) {
+      score += 5;
+      console.log('Dhaka match found, score:', score);
+    }
+
+    // Check for specific area matches
+    dhakaAreas.forEach(area => {
+      if (restAddress.includes(area) && searchAddr.includes(area)) {
+        score += 10;
+        console.log(`Area match found: ${area}, score:`, score);
+      }
+    });
+
+    // If one address has cantonment and the other has dhaka cantonment, it's a match
+    if ((restAddress.includes('cantonment') && searchAddr.includes('dhaka cantonment')) ||
+        (restAddress.includes('dhaka cantonment') && searchAddr.includes('cantonment'))) {
+      score += 10;
+      console.log('Cantonment match found, score:', score);
+    }
+
+    // Check individual words (excluding common words)
+    const searchWords = searchAddr.split(/[\s,]+/);
+    const commonWords = ['road', 'street', 'lane', 'avenue', 'the', 'and', 'near', 'beside', 'behind', 'in', 'at'];
+    
+    searchWords.forEach(word => {
+      if (word.length > 2 && !commonWords.includes(word) && restAddress.includes(word)) {
+        score += 2;
+        console.log(`Word match found: ${word}, score:`, score);
+      }
+    });
+
+    console.log('Final match score:', score);
+    return score;
+  };
+
+  // Memoize filterRestaurantsByLocation function to prevent recreation on every render
+  const filterRestaurantsByLocation = React.useCallback((coordinates, locationName) => {
+    console.log('Filtering restaurants for location:', locationName);
+    console.log('Available restaurants:', allRestaurants);
+
+    let matchedRestaurants = allRestaurants.map(restaurant => {
+      let score = 0;
+      let distance = Infinity;
+      let matchType = 'none';
+      
+      // Calculate coordinate-based distance if coordinates available
+      if (coordinates && restaurant.coordinates) {
+        distance = calculateDistance(
+          coordinates.lat,
+          coordinates.lng,
+          restaurant.coordinates.lat,
+          restaurant.coordinates.lng
+        );
+        // Add distance-based score (closer = higher score)
+        if (distance <= 10) { // 10km radius
+          score += Math.max(0, 10 - distance) * 2;
+          matchType = 'coordinates';
+        }
+      }
+      
+      // Calculate address match score
+      const addressScore = calculateAddressMatchScore(restaurant.address, locationName);
+      console.log('Address match score for', restaurant.name, ':', addressScore);
+      
+      if (addressScore > 0) {
+        score += addressScore;
+        matchType = matchType === 'coordinates' ? 'both' : 'address';
+      }
+      
+      return {
+        ...restaurant,
+        distance: distance === Infinity ? undefined : Math.round(distance * 10) / 10,
+        matchScore: score,
+        matchType
+      };
+    });
+    
+    // Filter and sort by match score
+    matchedRestaurants = matchedRestaurants
+      .filter(restaurant => restaurant.matchScore > 0) // Only keep restaurants with some match
+      .sort((a, b) => b.matchScore - a.matchScore); // Sort by match score
+
+    console.log('Matched restaurants:', matchedRestaurants);
+    setFilteredRestaurants(matchedRestaurants);
+  }, [allRestaurants]);
+
+  // Get user's current location
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserCoordinates(coords);
+          
+          try {
+            // Use OpenStreetMap's Nominatim for reverse geocoding
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`
+            );
+            
+            if (!response.ok) {
+              throw new Error('Failed to fetch location data');
+            }
+            
+            const data = await response.json();
+            const locationData = {
+              name: data.display_name,
+              coordinates: coords
+            };
+            
+            setLocation(locationData);
+            filterRestaurantsByLocation(coords, data.display_name);
+          } catch (error) {
+            console.error('Error getting location name:', error);
+            // Fallback to using coordinates as the location name
+            const locationData = {
+              name: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+              coordinates: coords
+            };
+            setLocation(locationData);
+            filterRestaurantsByLocation(coords, locationData.name);
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    }
+  };
 
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
+  };
+
+  const handleLocationSelect = (newLocation) => {
+    setLocation(newLocation);
+    if (newLocation?.coordinates) {
+      filterRestaurantsByLocation(newLocation.coordinates, newLocation.name);
+    }
   };
 
   const handleLocationChange = (newLocation) => {
@@ -73,6 +252,59 @@ const RestaurantsPage = (props) => {
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    
+    // First filter by search query
+    let results = allRestaurants.filter(restaurant => {
+      return restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant.cuisineType.some(cuisine => cuisine.toLowerCase().includes(searchQuery.toLowerCase()));
+    });
+    
+    // Then apply location filter if in location mode
+    if (viewMode === 'location') {
+      results = results.filter(restaurant => 
+        restaurant.location?.toLowerCase().includes(location?.name?.toLowerCase())
+      );
+    }
+    
+    // Update the filtered results
+    setFilteredRestaurants(results);
+  };
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    if (mode === 'all') {
+      setFilteredRestaurants(allRestaurants);
+    } else {
+      // Filter by current location
+      if (userCoordinates) {
+        filterRestaurantsByLocation(userCoordinates, location?.name);
+      }
+    }
+  };
+
+  // Update filtered results when location changes or view mode changes
+  useEffect(() => {
+    if (!allRestaurants.length) return; // Early return if no restaurants
+
+    if (viewMode === 'location' && userCoordinates && location?.name) {
+      filterRestaurantsByLocation(userCoordinates, location.name);
+    } else if (viewMode === 'all') {
+      setFilteredRestaurants(allRestaurants);
+    }
+  }, [viewMode, userCoordinates, location?.name, filterRestaurantsByLocation, allRestaurants]);
+
+  // Initialize filtered results when restaurants data changes
+  useEffect(() => {
+    if (!allRestaurants.length) return; // Early return if no restaurants
+    
+    if (viewMode === 'all') {
+      setFilteredRestaurants(allRestaurants);
+    }
+  }, [allRestaurants, viewMode]);
 
   return (
     <AppTheme {...props}>
@@ -114,7 +346,7 @@ const RestaurantsPage = (props) => {
         <Box 
           sx={{ 
             position: 'relative',
-            py: { xs: 8, md: 12 },
+            py: { xs: 10, md: 15 }, // Increased vertical padding
             overflow: 'hidden',
             '&::before': {
               content: '""',
@@ -137,7 +369,8 @@ const RestaurantsPage = (props) => {
                 fontWeight: 'bold', 
                 color: 'white',
                 textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                fontSize: { xs: '2.5rem', md: '3.5rem' }
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                textAlign: { xs: 'center', md: 'left' }
               }}
             >
               Discover Culinary Excellence
@@ -145,28 +378,38 @@ const RestaurantsPage = (props) => {
             <Typography 
               variant="h5" 
               sx={{ 
-                mb: 4, 
+                mb: 5, // Increased bottom margin
                 color: 'rgba(255,255,255,0.9)',
                 maxWidth: '600px',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+                textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
+                textAlign: { xs: 'center', md: 'left' },
+                mx: { xs: 'auto', md: 0 } // Center on mobile, left align on desktop
               }}
             >
               Find the perfect restaurant for your next dining experience
             </Typography>
             
             <Paper 
+              component="form"
+              onSubmit={handleSearchSubmit}
               elevation={0} 
               sx={{ 
-                p: 3, 
-                mb: 3, 
+                p: { xs: 2.5, md: 4 }, // Increased padding
+                mb: 4,
                 bgcolor: 'rgba(255,255,255,0.9)',
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
-                borderRadius: 2,
-                maxWidth: '800px'
+                borderRadius: 3,
+                maxWidth: '800px',
+                mx: { xs: 'auto', md: 0 } // Center on mobile, left align on desktop
               }}
             >
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+              <Stack 
+                direction={{ xs: 'column', md: 'row' }} 
+                spacing={{ xs: 2.5, md: 2.5 }} // Consistent spacing
+                alignItems="stretch"
+                sx={{ height: { md: '60px' } }} // Fixed height on desktop
+              >
                 <TextField
                   fullWidth
                   placeholder="Search restaurants, cuisines, or locations..."
@@ -178,19 +421,22 @@ const RestaurantsPage = (props) => {
                         <Search size={20} />
                       </InputAdornment>
                     ),
+                    sx: { height: '100%' }
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       bgcolor: 'rgba(255,255,255,0.8)',
+                      height: '100%'
                     }
                   }}
                 />
                 <Button 
+                  type="submit"
                   variant="contained" 
                   color="primary"
                   sx={{ 
-                    minWidth: 120,
-                    height: 56,
+                    minWidth: { xs: '100%', md: 120 },
+                    height: { xs: 56, md: '100%' },
                     borderRadius: 2,
                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                   }}
@@ -200,10 +446,93 @@ const RestaurantsPage = (props) => {
               </Stack>
             </Paper>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
-              <MapPin size={20} />
-              <LocationBasedRestaurants onLocationChange={handleLocationChange} />
+            {/* Location Section */}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                mb: 3,
+                flexDirection: { xs: 'column', md: 'row' }
+              }}
+            >
+              <LocationAutocomplete onLocationSelect={handleLocationSelect} />
+              <Button
+                variant="outlined"
+                onClick={getCurrentLocation}
+                startIcon={<MapPin size={18} />}
+                sx={{ 
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.5)',
+                  '&:hover': {
+                    borderColor: 'white',
+                    bgcolor: 'rgba(255,255,255,0.1)'
+                  },
+                  whiteSpace: 'nowrap',
+                  minWidth: { xs: '100%', md: 'auto' }
+                }}
+              >
+                Use Current Location
+              </Button>
             </Box>
+
+            {/* Location Info */}
+            {location && (
+              <Typography 
+                sx={{ 
+                  color: 'white', 
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  justifyContent: { xs: 'center', md: 'flex-start' }
+                }}
+              >
+                <MapPin size={16} />
+                {location.name}
+              </Typography>
+            )}
+
+            {/* View Mode Toggle */}
+            <Stack 
+              direction="row" 
+              spacing={2} 
+              sx={{ 
+                mb: 4,
+                justifyContent: { xs: 'center', md: 'flex-start' }
+              }}
+            >
+              <Button
+                variant={viewMode === 'all' ? 'contained' : 'outlined'}
+                onClick={() => handleViewModeChange('all')}
+                startIcon={<Filter size={18} />}
+                sx={{ 
+                  color: viewMode === 'all' ? 'white' : 'rgba(255,255,255,0.9)',
+                  borderColor: 'rgba(255,255,255,0.5)',
+                  '&:hover': {
+                    borderColor: 'white',
+                    bgcolor: viewMode === 'all' ? 'primary.dark' : 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                All Restaurants
+              </Button>
+              <Button
+                variant={viewMode === 'location' ? 'contained' : 'outlined'}
+                onClick={() => handleViewModeChange('location')}
+                startIcon={<MapPin size={18} />}
+                sx={{ 
+                  color: viewMode === 'location' ? 'white' : 'rgba(255,255,255,0.9)',
+                  borderColor: 'rgba(255,255,255,0.5)',
+                  '&:hover': {
+                    borderColor: 'white',
+                    bgcolor: viewMode === 'location' ? 'primary.dark' : 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                Nearby Only
+              </Button>
+            </Stack>
           </Container>
         </Box>
 
@@ -266,6 +595,20 @@ const RestaurantsPage = (props) => {
                 />
               ))}
             </Box>
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <Button 
+                variant={viewMode === 'all' ? 'contained' : 'outlined'} 
+                onClick={() => handleViewModeChange('all')}
+              >
+                View All
+              </Button>
+              <Button 
+                variant={viewMode === 'location' ? 'contained' : 'outlined'} 
+                onClick={() => handleViewModeChange('location')}
+              >
+                View by Location
+              </Button>
+            </Box>
           </Container>
         </Box>
 
@@ -284,7 +627,7 @@ const RestaurantsPage = (props) => {
             }}
           >
             <MapPin size={24} />
-            {filteredRestaurants.length} Restaurants Found near {location}
+            {filteredRestaurants.length} Restaurants Found near {location?.name || 'your location'}
           </Typography>
 
           <Box sx={{ 

@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardMedia, CardActions, Typography, Box, Chip, Rating, Button } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import { MapPin } from 'lucide-react';
 
 export function RestaurantCard({ restaurant }) {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export function RestaurantCard({ restaurant }) {
           <Typography variant="h6" component="h3" sx={{ fontWeight: 600 }}>
             {restaurant.name}
           </Typography>
-          {restaurant.rating && (
+          {typeof restaurant.rating === 'number' && (
             <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'warning.light', px: 1, py: 0.5, borderRadius: 1 }}>
               <Rating value={restaurant.rating} precision={0.5} size="small" readOnly />
               <Typography variant="body2" sx={{ ml: 0.5, color: 'warning.dark' }}>
@@ -81,8 +82,8 @@ export function RestaurantCard({ restaurant }) {
             />
           ))}
         </Box>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
             {restaurant.priceRange}
           </Typography>
@@ -92,6 +93,36 @@ export function RestaurantCard({ restaurant }) {
             </Typography>
           )}
         </Box>
+
+        {/* Location and Distance Info */}
+        {(restaurant.distance !== undefined || restaurant.matchType) && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <MapPin size={16} />
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              {typeof restaurant.distance === 'number' && (
+                <Typography variant="body2" color="text.secondary">
+                  {restaurant.distance.toFixed(1)} km away
+                </Typography>
+              )}
+              {restaurant.matchType && (
+                <Chip
+                  size="small"
+                  label={restaurant.matchType === 'both' ? 'Exact Location Match' :
+                         restaurant.matchType === 'coordinates' ? 'Near You' :
+                         'Address Match'}
+                  sx={{ 
+                    bgcolor: restaurant.matchType === 'both' ? 'success.light' :
+                           restaurant.matchType === 'coordinates' ? 'info.light' :
+                           'warning.light',
+                    color: restaurant.matchType === 'both' ? 'success.dark' :
+                           restaurant.matchType === 'coordinates' ? 'info.dark' :
+                           'warning.dark',
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+        )}
       </CardContent>
       
       <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
