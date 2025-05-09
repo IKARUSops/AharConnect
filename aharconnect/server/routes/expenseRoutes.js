@@ -10,3 +10,6 @@ router.delete('/:id', auth, expenseController.deleteExpense);
 router.get('/statistics', auth, expenseController.getStatistics);
 
 module.exports = router;
+
+const expenseController = require('../controllers/expenseController');
+console.log('expenseController:', expenseController);
