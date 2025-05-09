@@ -276,11 +276,13 @@ const MenuDashboard = () => {
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      style={{ display: 'block', marginBottom: '10px' }}
+                    <TextField
+                      fullWidth
+                      name="image"
+                      label="Image URL"
+                      value={formData.image}
+                      onChange={handleInputChange}
+                      variant="outlined"
                     />
                   </Grid>
                   <Grid item xs={12}>

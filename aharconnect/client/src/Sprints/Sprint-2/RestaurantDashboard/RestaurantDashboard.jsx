@@ -15,7 +15,8 @@ import {
   Tab,
   Alert,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  TextField
 } from '@mui/material';
 import {
   Receipt as ReceiptIcon,
@@ -33,6 +34,7 @@ import MenuDashboard from '../../Sprint-1/Menu/Menuedit';
 import ExpenseTrackingDashboard from '../../Sprint-1/Expenses/expenses_entry';
 import EditProfileDialog from './EditProfileDialog';
 import API from '../../../api/auth';
+import axios from 'axios';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -58,6 +60,7 @@ const RestaurantDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reservationSettings, setReservationSettings] = useState(null);
+  const [eventRate, setEventRate] = useState('');
 
   // Mock data for when no profile exists
   const mockData = {
@@ -322,6 +325,40 @@ const RestaurantDashboard = () => {
             <Typography color="text.secondary">
               Reservation management coming soon.
             </Typography>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body1" gutterBottom>
+                Update Event Rates
+              </Typography>
+              <TextField
+                label="Event Rate ($/hour)"
+                type="number"
+                variant="outlined"
+                value={eventRate}
+                onChange={(e) => setEventRate(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('authToken');
+                    const response = await axios.put('/api/reservations/settings', {
+                      eventRate
+                    }, {
+                      headers: {
+                        Authorization: `Bearer ${token}`
+                      }
+                    });
+                    console.log('Event rates updated successfully:', response.data);
+                  } catch (error) {
+                    console.error('Error updating event rates:', error);
+                  }
+                }}
+              >
+                Update Events
+              </Button>
+            </Box>
           </StyledPaper>
         )}
         {activeTab === 4 && (

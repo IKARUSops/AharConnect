@@ -43,7 +43,12 @@ const restaurantReservationSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  eventRate: {
+    type: Number,
+    required: true,
+    default: 100 // Default value for event rate
+  },
 });
 
 // Update the updatedAt timestamp before saving

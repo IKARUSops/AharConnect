@@ -148,17 +148,14 @@ app.post('/api/expenses', (req, res) => {
 });
 
 // Route to handle menu item creation with image upload
-app.post('/api/menu', upload.single('image'), (req, res) => {
-    const { name, description, price } = req.body;
-    const imagePath = req.file ? req.file.path : null;
+app.post('/api/menu', (req, res) => {
+    const { name, description, price, image } = req.body;
+    // Save menu item details to the database (pseudo-code)
+    // MenuItem.create({ name, description, price, image })
+    //   .then(item => res.status(201).json(item))
+    //   .catch(err => res.status(500).json({ error: err.message }));
 
-  // Save menu item details to the database (pseudo-code)
-  // MenuItem.create({ name, description, price, image: imagePath })
-  //   .then(item => res.status(201).json(item))
-  //   .catch(err => res.status(500).json({ error: err.message }));
-
-
-    res.status(201).send({ message: 'Menu item created successfully', imagePath });
+    res.status(201).send({ message: 'Menu item created successfully', image });
 });
 
 mongoose.connect(process.env.MONGO_URI, {

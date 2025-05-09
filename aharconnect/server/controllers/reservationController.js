@@ -36,7 +36,8 @@ const updateReservationSettings = async (req, res) => {
       maxCapacity,
       availableTimeSlots,
       bookingDuration,
-      advanceBookingDays
+      advanceBookingDays,
+      eventRate
     } = req.body;
 
     let reservationSettings = await RestaurantReservation.findOne({ restaurant: restaurant._id });
@@ -50,7 +51,8 @@ const updateReservationSettings = async (req, res) => {
           maxCapacity,
           availableTimeSlots,
           bookingDuration,
-          advanceBookingDays
+          advanceBookingDays,
+          eventRate
         },
         { new: true }
       );
@@ -63,7 +65,8 @@ const updateReservationSettings = async (req, res) => {
         maxCapacity,
         availableTimeSlots,
         bookingDuration,
-        advanceBookingDays
+        advanceBookingDays,
+        eventRate
       });
       await reservationSettings.save();
     }

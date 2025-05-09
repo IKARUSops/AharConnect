@@ -19,6 +19,7 @@ const getAllReservations = async (req, res) => {
       capacity: reservation.maxCapacity,
       minHours: 1, // Placeholder minimum hours
       restaurantId: reservation.restaurant?._id,
+      eventRate: reservation.eventRate || 0 // Add eventRate
     }));
 
     console.log('Transformed Reservations sent to frontend:', transformedReservations);
@@ -50,6 +51,7 @@ const getReservationById = async (req, res) => {
       capacity: reservation.maxCapacity,
       minHours: 1, // Placeholder minimum hours
       restaurantId: reservation.restaurant?._id,
+      eventRate: reservation.eventRate || 0 // Add eventRate
     };
 
     res.status(200).json(transformedReservation);

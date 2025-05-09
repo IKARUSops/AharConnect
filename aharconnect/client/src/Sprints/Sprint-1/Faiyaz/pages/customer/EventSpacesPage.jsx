@@ -26,76 +26,6 @@ import AppTheme from '../../../../../shared-theme/AppTheme';
 import { CssBaseline } from '@mui/material';
 import Layout from '../../components/layout/Layout';
 
-// Mock event spaces data
-const mockEventSpaces = [
-  {
-    id: '1',
-    name: 'Grand Hall',
-    restaurantId: '1',
-    restaurantName: 'The Italian Place',
-    description: 'A spacious hall perfect for large gatherings, weddings, and corporate events.',
-    capacity: 200,
-    pricePerHour: 350,
-    minHours: 4,
-    availability: 'Available',
-    amenities: ['Tables & Chairs', 'Sound System', 'Projector', 'Wi-Fi', 'Air Conditioning'],
-    images: [
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=2370&auto=format&fit=crop',
-    ],
-    address: '123 Main St, New York, NY',
-  },
-  {
-    id: '2',
-    name: 'Garden Terrace',
-    restaurantId: '2',
-    restaurantName: 'Sakura Japanese',
-    description: 'A beautiful outdoor space surrounded by lush gardens, perfect for intimate gatherings.',
-    capacity: 80,
-    pricePerHour: 250,
-    minHours: 3,
-    availability: 'Available',
-    amenities: ['Tables & Chairs', 'Outdoor Heaters', 'String Lights', 'Tent Option'],
-    images: [
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=2370&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1507504031003-b417219a0fde?q=80&w=2370&auto=format&fit=crop',
-    ],
-    address: '456 Elm St, New York, NY',
-  },
-  {
-    id: '3',
-    name: 'VIP Lounge',
-    restaurantId: '3',
-    restaurantName: 'The Steakhouse',
-    description: 'An exclusive lounge with premium amenities for sophisticated events and gatherings.',
-    capacity: 50,
-    pricePerHour: 300,
-    minHours: 2,
-    availability: 'Booked',
-    amenities: ['Premium Bar', 'Private Restrooms', 'DJ Booth', 'Security'],
-    images: [
-      'https://images.unsplash.com/photo-1517659649778-bae24b8c2e26?q=80&w=2369&auto=format&fit=crop',
-    ],
-    address: '789 Oak St, New York, NY',
-  },
-  {
-    id: '4',
-    name: 'Rooftop Venue',
-    restaurantId: '1',
-    restaurantName: 'The Italian Place',
-    description: 'Stunning rooftop venue with panoramic city views, perfect for special celebrations.',
-    capacity: 120,
-    pricePerHour: 400,
-    minHours: 3,
-    availability: 'Available',
-    amenities: ['Full Bar', 'Lounge Seating', 'Dance Floor', 'Catering Kitchen'],
-    images: [
-      'https://images.unsplash.com/photo-1561912774-79769a0a0a7a?q=80&w=2260&auto=format&fit=crop',
-    ],
-    address: '123 Main St, New York, NY',
-  },
-];
-
 const EventSpacesPage = () => {
   const theme = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,7 +44,10 @@ const EventSpacesPage = () => {
       console.log('API call to /api/event-reservations/all initiated');
       try {
         const response = await axios.get('/api/event-reservations/all'); // Correct endpoint
-        return response.data;
+        return response.data.map(space => ({
+          ...space,
+          eventRate: space.eventRate || 0 // Default to 0 if not provided
+        }));
       } catch (error) {
         console.error('Error fetching event spaces:', error);
         return [];
@@ -124,7 +57,7 @@ const EventSpacesPage = () => {
 
   console.log('Data received from API:', apiEventSpaces);
 
-  const eventSpaces = [...mockEventSpaces, ...apiEventSpaces];
+  const eventSpaces = [...apiEventSpaces];
 
   const filteredEventSpaces = eventSpaces.filter(space => {
     const matchesSearch = (space.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -440,6 +373,13 @@ const EventSpacesPage = () => {
                       fontSize: '1.1rem'
                     }}>
                       ${space.pricePerHour}/hour
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      color: '#6237A0',
+                      fontSize: '0.875rem',
+                      mt: 1
+                    }}>
+                      Event Rate: ${space.eventRate}
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ 

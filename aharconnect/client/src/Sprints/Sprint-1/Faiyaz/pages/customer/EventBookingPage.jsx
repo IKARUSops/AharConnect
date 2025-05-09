@@ -57,8 +57,11 @@ const mockTimeSlots = [
 
 // Styled Components
 const StyledContainer = styled(Container)(({ theme }) => ({
-  paddingTop: theme.spacing(4),
-  paddingBottom: theme.spacing(8),
+  maxWidth: 'lg',
+  padding: theme.spacing(4),
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+  },
 }));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -112,6 +115,14 @@ const PageHeader = styled('div')(({ theme }) => ({
     alignItems: 'center',
     gap: theme.spacing(1),
   },
+}));
+
+const LoadingIndicator = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: '100%',
+  color: theme.palette.text.secondary,
 }));
 
 const EventBookingPage = () => {
@@ -467,10 +478,10 @@ const EventBookingPage = () => {
                       >
                         {isCheckingAvailability ? (
                           <MenuItem disabled>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <LoadingIndicator>
                               <AccessTime fontSize="small" />
                               Checking availability...
-                            </Box>
+                            </LoadingIndicator>
                           </MenuItem>
                         ) : (
                           availableTimeSlots.map(time => (
