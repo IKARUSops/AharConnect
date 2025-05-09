@@ -6,25 +6,29 @@ const authMiddleware = require('../middleware/authMiddleware');
 // Protect all routes with authentication
 router.use(authMiddleware);
 
-// Create a new booking
-router.post('/', eventBookingController.createBooking);
+// Get event packages for a restaurant
+router.get('/event-packages/:restaurantId', eventBookingController.getEventPackages);
+
+// Check availability for an event space
+router.get('/check-availability', eventBookingController.checkAvailability);
 
 // Get all bookings for current user
 router.get('/user', eventBookingController.getUserBookings);
 
+// Get all bookings for a restaurant
+router.get('/restaurant/:restaurantId', eventBookingController.getRestaurantBookings);
+
 // Get all bookings for an event space
 router.get('/event-space/:eventSpaceId', eventBookingController.getEventSpaceBookings);
 
-// Get a specific booking
+// Create a new booking
+router.post('/', eventBookingController.createBooking);
+
+// Routes with :id parameter
 router.get('/:id', eventBookingController.getBooking);
-
-// Update a booking
 router.put('/:id', eventBookingController.updateBooking);
-
-// Cancel a booking
 router.patch('/:id/cancel', eventBookingController.cancelBooking);
-
-// Check availability for an event space
-router.get('/check-availability', eventBookingController.checkAvailability);
+router.patch('/:id/approve', eventBookingController.approveBooking);
+router.delete('/:id', eventBookingController.deleteBooking);
 
 module.exports = router;

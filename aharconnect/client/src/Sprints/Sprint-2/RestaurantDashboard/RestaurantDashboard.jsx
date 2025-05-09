@@ -16,7 +16,19 @@ import {
   Alert,
   Switch,
   FormControlLabel,
-  TextField
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Receipt as ReceiptIcon,
@@ -28,13 +40,21 @@ import {
   EventSeat as EventSeatIcon,
   Assessment as AssessmentIcon,
   AccountBalanceWallet as WalletIcon,
+  Check as CheckIcon,
+  Delete as DeleteIcon,
+  Message as MessageIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { format } from 'date-fns';
 import MenuDashboard from '../../Sprint-1/Menu/Menuedit';
 import ExpenseTrackingDashboard from '../../Sprint-1/Expenses/expenses_entry';
 import EditProfileDialog from './EditProfileDialog';
 import API from '../../../api/auth';
 import axios from 'axios';
+import { getRestaurantEventBookings, approveEventBooking, deleteEventBooking } from '../../../api/eventBookings';
+import { toast } from 'sonner';
+import { getUnreadMessageCount, getConversation, sendMessage, markMessagesAsRead, getRestaurantConversations } from '../../../api/messages';
+import { useNavigate } from 'react-router-dom';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -61,6 +81,16 @@ const RestaurantDashboard = () => {
   const [error, setError] = useState('');
   const [reservationSettings, setReservationSettings] = useState(null);
   const [eventRate, setEventRate] = useState('');
+  const [eventBookings, setEventBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate();
 
   // Mock data for when no profile exists
   const mockData = {
@@ -74,17 +104,28 @@ const RestaurantDashboard = () => {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.error('[RestaurantDashboard] No auth token found');
+      toast.error('Please log in again');
+      navigate('/sign-in');
+      return;
+    }
     fetchRestaurantProfile();
   }, []);
 
   const fetchRestaurantProfile = async () => {
+    console.log('[RestaurantDashboard] Fetching restaurant profile');
     try {
       const response = await API.get('/restaurants/profile');
+      console.log('[RestaurantDashboard] Profile data received:', response.data);
       setProfileData(response.data);
       setError('');
     } catch (error) {
-      console.error('Error fetching restaurant profile:', error);
-      setError('Failed to fetch restaurant profile');
+      console.error('[RestaurantDashboard] Error fetching restaurant profile:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to fetch restaurant profile';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -129,6 +170,194 @@ const RestaurantDashboard = () => {
 
     fetchReservationSettings();
   }, []);
+
+  useEffect(() => {
+    if (profileData?._id) {
+      console.log('[RestaurantDashboard] Restaurant profile loaded, initializing message features');
+      fetchUnreadMessageCount();
+      if (activeTab === 5) { // Messages tab
+        fetchConversations();
+      }
+    } else if (profileData === null && !loading) {
+      console.warn('[RestaurantDashboard] No restaurant profile found');
+      toast.error('Please complete your restaurant profile first');
+    }
+  }, [profileData, activeTab]);
+
+  const fetchEventBookings = async () => {
+    try {
+      setLoadingBookings(true);
+      const bookings = await getRestaurantEventBookings(profileData._id);
+      setEventBookings(bookings);
+    } catch (error) {
+      console.error('Error fetching event bookings:', error);
+      toast.error('Failed to fetch event bookings');
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleApproveBooking = async (bookingId) => {
+    try {
+      setLoadingBookings(true);
+      await approveEventBooking(bookingId);
+      toast.success('Booking approved successfully');
+      await fetchEventBookings(); // Refresh the list
+    } catch (error) {
+      console.error('Error approving booking:', error);
+      toast.error(error.message || 'Failed to approve booking');
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleDeleteClick = (booking) => {
+    setSelectedBooking(booking);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteEventBooking(selectedBooking._id);
+      toast.success('Booking deleted successfully');
+      setDeleteDialogOpen(false);
+      setSelectedBooking(null);
+      fetchEventBookings(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
+    }
+  };
+
+  const fetchUnreadMessageCount = async () => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot fetch unread count without profile');
+      return;
+    }
+
+    try {
+      console.log('[RestaurantDashboard] Fetching unread message count');
+      const count = await getUnreadMessageCount();
+      console.log('[RestaurantDashboard] Unread count received:', count);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error fetching unread count:', error);
+      toast.error('Failed to fetch unread messages');
+    }
+  };
+
+  const handleConversationSelect = async (eventSpaceId) => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot select conversation without profile');
+      return;
+    }
+
+    console.log('[RestaurantDashboard] Selecting conversation:', eventSpaceId);
+    try {
+      setLoadingMessages(true);
+      const conversation = await getConversation(eventSpaceId);
+      
+      if (!conversation || conversation.length === 0) {
+        console.warn('[RestaurantDashboard] No messages found for conversation');
+        toast.warning('No messages found in this conversation');
+        return;
+      }
+
+      console.log('[RestaurantDashboard] Conversation loaded:', {
+        messageCount: conversation.length,
+        eventSpaceId
+      });
+
+      setSelectedConversation({
+        eventSpaceId,
+        messages: conversation
+      });
+
+      // Mark messages as read
+      const unreadMessageIds = conversation
+        .filter(msg => !msg.isRead && msg.receiverId === profileData._id)
+        .map(msg => msg._id);
+
+      if (unreadMessageIds.length > 0) {
+        console.log('[RestaurantDashboard] Marking messages as read:', unreadMessageIds.length);
+        await markMessagesAsRead(unreadMessageIds);
+        await fetchUnreadMessageCount(); // Refresh unread count
+      }
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error selecting conversation:', error);
+      toast.error('Failed to load conversation');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot send reply without profile');
+      toast.error('Please complete your restaurant profile first');
+      return;
+    }
+
+    if (!replyText.trim() || !selectedConversation) {
+      console.warn('[RestaurantDashboard] Invalid reply attempt:', {
+        hasText: !!replyText.trim(),
+        hasConversation: !!selectedConversation
+      });
+      toast.error('Please enter a message and select a conversation');
+      return;
+    }
+
+    console.log('[RestaurantDashboard] Sending reply:', {
+      eventSpaceId: selectedConversation.eventSpaceId,
+      length: replyText.length
+    });
+
+    try {
+      const messageData = {
+        eventSpaceId: selectedConversation.eventSpaceId,
+        content: replyText.trim(),
+        receiverId: selectedConversation.messages[0].senderId,
+        subject: selectedConversation.messages[0].subject
+      };
+
+      await sendMessage(messageData);
+      console.log('[RestaurantDashboard] Reply sent successfully');
+      
+      setReplyText('');
+      toast.success('Reply sent successfully');
+      
+      // Refresh conversation
+      await handleConversationSelect(selectedConversation.eventSpaceId);
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error sending reply:', error);
+      toast.error('Failed to send reply. Please try again.');
+    }
+  };
+
+  const fetchConversations = async () => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot fetch conversations without profile');
+      return;
+    }
+
+    console.log('[RestaurantDashboard] Fetching conversations');
+    try {
+      setLoadingMessages(true);
+      const conversations = await getRestaurantConversations();
+      
+      console.log('[RestaurantDashboard] Conversations loaded:', {
+        count: conversations.length
+      });
+
+      setMessages(conversations);
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error fetching conversations:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to load conversations';
+      toast.error(errorMessage);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -275,6 +504,7 @@ const RestaurantDashboard = () => {
           <Tab icon={<WalletIcon />} label="Expenses" />
           <Tab icon={<EventSeatIcon />} label="Reservations" />
           <Tab icon={<AssessmentIcon />} label="Analytics" />
+          <Tab icon={<MessageIcon />} label={`Messages ${unreadCount > 0 ? `(${unreadCount})` : ''}`} />
         </Tabs>
       </Box>
 
@@ -320,12 +550,10 @@ const RestaurantDashboard = () => {
         {activeTab === 3 && (
           <StyledPaper>
             <Typography variant="h6" gutterBottom>
-              Reservations
+              Event Space Bookings
             </Typography>
-            <Typography color="text.secondary">
-              Reservation management coming soon.
-            </Typography>
-            <Box sx={{ mt: 2 }}>
+            
+            <Box sx={{ mb: 4 }}>
               <Typography variant="body1" gutterBottom>
                 Update Event Rates
               </Typography>
@@ -335,7 +563,7 @@ const RestaurantDashboard = () => {
                 variant="outlined"
                 value={eventRate}
                 onChange={(e) => setEventRate(e.target.value)}
-                sx={{ mb: 2 }}
+                sx={{ mr: 2 }}
               />
               <Button
                 variant="contained"
@@ -343,22 +571,127 @@ const RestaurantDashboard = () => {
                 onClick={async () => {
                   try {
                     const token = localStorage.getItem('authToken');
-                    const response = await axios.put('/api/reservations/settings', {
+                    await axios.put('/api/reservations/settings', {
                       eventRate
                     }, {
                       headers: {
                         Authorization: `Bearer ${token}`
                       }
                     });
-                    console.log('Event rates updated successfully:', response.data);
+                    toast.success('Event rates updated successfully');
                   } catch (error) {
                     console.error('Error updating event rates:', error);
+                    toast.error('Failed to update event rates');
                   }
                 }}
               >
-                Update Events
+                Update Rates
               </Button>
             </Box>
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Customer</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Package</TableCell>
+                    <TableCell>Guests</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loadingBookings ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">Loading bookings...</TableCell>
+                    </TableRow>
+                  ) : eventBookings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">No event bookings found</TableCell>
+                    </TableRow>
+                  ) : (
+                    eventBookings.map((booking) => (
+                      <TableRow key={booking._id}>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{booking.customerName}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {booking.customerEmail}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(booking.startDateTime), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {`${format(new Date(booking.startDateTime), 'h:mm a')} - ${format(new Date(booking.endDateTime), 'h:mm a')}`}
+                        </TableCell>
+                        <TableCell>{booking.eventPackage?.name || 'N/A'}</TableCell>
+                        <TableCell>{booking.numberOfGuests}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={booking.status}
+                            color={
+                              booking.status === 'confirmed' ? 'success' :
+                              booking.status === 'pending' ? 'warning' :
+                              'default'
+                            }
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {booking.status === 'pending' && (
+                            <IconButton
+                              color="success"
+                              onClick={() => handleApproveBooking(booking._id)}
+                              title="Approve booking"
+                            >
+                              <CheckIcon />
+                            </IconButton>
+                          )}
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteClick(booking)}
+                            title="Delete booking"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogContent>
+                Are you sure you want to delete this booking?
+                {selectedBooking && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      Customer: {selectedBooking.customerName}
+                    </Typography>
+                    <Typography variant="body2">
+                      Date: {format(new Date(selectedBooking.startDateTime), 'MMM d, yyyy')}
+                    </Typography>
+                    <Typography variant="body2">
+                      Time: {format(new Date(selectedBooking.startDateTime), 'h:mm a')}
+                    </Typography>
+                  </Box>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+                  Delete
+                </Button>
+              </DialogActions>
+            </Dialog>
           </StyledPaper>
         )}
         {activeTab === 4 && (
@@ -369,6 +702,156 @@ const RestaurantDashboard = () => {
             <Typography color="text.secondary">
               Analytics dashboard coming soon.
             </Typography>
+          </StyledPaper>
+        )}
+        {activeTab === 5 && (
+          <StyledPaper>
+            {!profileData?._id ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  Complete Your Profile
+                </Typography>
+                <Typography color="text.secondary" paragraph>
+                  Please complete your restaurant profile to access messages.
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={handleProfileDialogOpen}
+                  startIcon={<EditIcon />}
+                >
+                  Complete Profile
+                </Button>
+              </Box>
+            ) : (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  Message Center {loadingMessages && '(Loading...)'}
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={4}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Recent Conversations {messages.length > 0 ? `(${messages.length})` : ''}
+                        </Typography>
+                        {loadingMessages ? (
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <Typography color="text.secondary">Loading conversations...</Typography>
+                          </Box>
+                        ) : messages.length === 0 ? (
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <Typography color="text.secondary">No conversations yet</Typography>
+                          </Box>
+                        ) : (
+                          <List>
+                            {messages.map((thread) => (
+                              <ListItem
+                                key={thread.eventSpaceId}
+                                button
+                                selected={selectedConversation?.eventSpaceId === thread.eventSpaceId}
+                                onClick={() => handleConversationSelect(thread.eventSpaceId)}
+                              >
+                                <ListItemText
+                                  primary={thread.eventSpaceName}
+                                  secondary={
+                                    <>
+                                      {thread.customerName} - {format(new Date(thread.lastMessageDate), 'MMM d, yyyy')}
+                                      {thread.eventSpaceDescription && (
+                                        <Typography variant="caption" display="block" color="text.secondary">
+                                          {thread.eventSpaceDescription}
+                                        </Typography>
+                                      )}
+                                    </>
+                                  }
+                                />
+                                {thread.unreadCount > 0 && (
+                                  <Chip
+                                    size="small"
+                                    color="primary"
+                                    label={thread.unreadCount}
+                                  />
+                                )}
+                              </ListItem>
+                            ))}
+                          </List>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={8}>
+                    {selectedConversation ? (
+                      <Card>
+                        <CardContent>
+                          <Box sx={{ height: '400px', overflowY: 'auto', mb: 2 }}>
+                            {selectedConversation.messages.map((message) => (
+                              <Box
+                                key={message._id}
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: message.senderId === profileData._id ? 'row-reverse' : 'row',
+                                  mb: 2,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    maxWidth: '70%',
+                                    backgroundColor: message.senderId === profileData._id ? 'primary.main' : 'grey.100',
+                                    color: message.senderId === profileData._id ? 'white' : 'text.primary',
+                                    borderRadius: 2,
+                                    p: 2,
+                                  }}
+                                >
+                                  <Typography variant="subtitle2">
+                                    {message.senderId === profileData._id ? 'You' : message.senderName}
+                                    {message.senderType && (
+                                      <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.8 }}>
+                                        ({message.senderType})
+                                      </Typography>
+                                    )}
+                                  </Typography>
+                                  <Typography>{message.content}</Typography>
+                                  <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
+                                    {format(new Date(message.createdAt), 'MMM d, yyyy h:mm a')}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <TextField
+                              fullWidth
+                              multiline
+                              rows={2}
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Type your reply..."
+                              variant="outlined"
+                              disabled={loadingMessages}
+                            />
+                            <Button
+                              variant="contained"
+                              onClick={handleSendReply}
+                              disabled={!replyText.trim() || loadingMessages}
+                            >
+                              Send
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card>
+                        <CardContent sx={{ textAlign: 'center', py: 8 }}>
+                          <MessageIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                          <Typography variant="h6" color="text.secondary">
+                            Select a conversation to view messages
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </Grid>
+                </Grid>
+              </>
+            )}
           </StyledPaper>
         )}
       </Box>

@@ -17,6 +17,7 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
 const eventReservationRoutes = require('./routes/eventReservationRoutes');
 const eventBookingRoutes = require('./routes/eventBookingRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/event-reservations', eventReservationRoutes);
 app.use('/api/event-bookings', eventBookingRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Restaurant profile routes
 app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {

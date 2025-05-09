@@ -1,9 +1,11 @@
+// React and routing imports
 import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+
 // Material UI imports
 import {
   Button,
@@ -41,14 +43,21 @@ import {
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { toast } from 'sonner';
+
+// Local imports
 import Layout from '../../components/layout/Layout';
 import { EventBookingConfirmation } from '../../components/customer/EventBookingConfirmation';
 import { EventSpaceDetails } from '../../components/customer/EventSpaceDetails';
 import { createEventBooking } from '../../../../../api/eventBookings';
 import ErrorBoundary from '../../../../../components/ErrorBoundary';
 
-// Mock time slots - we'll keep this until we implement dynamic time slots from the backend
-const mockTimeSlots = [
+// Configure axios defaults
+axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Constants
+const STEPS = ['Date & Time', 'Package Selection', 'Personal Details'];
+const TIME_SLOTS = [
   '10:00 AM', '11:00 AM', '12:00 PM', 
   '1:00 PM', '2:00 PM', '3:00 PM', 
   '4:00 PM', '5:00 PM', '6:00 PM', 
@@ -57,11 +66,8 @@ const mockTimeSlots = [
 
 // Styled Components
 const StyledContainer = styled(Container)(({ theme }) => ({
-  maxWidth: 'lg',
-  padding: theme.spacing(4),
-  [theme.breakpoints.down('sm')]: {
-    padding: theme.spacing(2),
-  },
+  paddingTop: theme.spacing(4),
+  paddingBottom: theme.spacing(8),
 }));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -117,17 +123,329 @@ const PageHeader = styled('div')(({ theme }) => ({
   },
 }));
 
-const LoadingIndicator = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100%',
-  color: theme.palette.text.secondary,
-}));
+// Custom Components
+const DateTimeStep = ({ 
+  selectedDate, onDateSelect, selectedStartTime, onStartTimeSelect,
+  selectedEndTime, onEndTimeSelect, partySize, onPartySizeChange,
+  availableTimeSlots, isCheckingAvailability, eventSpace
+}) => (
+  <Grid container spacing={3}>
+    <Grid item xs={12}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Select Date"
+          value={selectedDate}
+          onChange={onDateSelect}
+          slotProps={{
+            textField: {
+              fullWidth: true,
+              variant: "outlined",
+              sx: { mb: 2 }
+            }
+          }}
+          disablePast
+        />
+      </LocalizationProvider>
+    </Grid>
 
+    <Grid item xs={12}>
+      <Typography variant="h6" gutterBottom>
+        Select Time Slot
+      </Typography>
+    </Grid>
+
+    <Grid item xs={12} md={6}>
+      <FormControl 
+        fullWidth 
+        variant="outlined"
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            height: '56px',
+            fontSize: '1.1rem'
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '1.1rem'
+          }
+        }}
+      >
+        <InputLabel>Start Time</InputLabel>
+        <Select
+          value={selectedStartTime}
+          onChange={(e) => onStartTimeSelect(e.target.value)}
+          label="Start Time"
+          disabled={isCheckingAvailability}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                maxHeight: 300,
+                '& .MuiMenuItem-root': {
+                  fontSize: '1.1rem',
+                  py: 1.5
+                }
+              }
+            }
+          }}
+        >
+          {isCheckingAvailability ? (
+            <MenuItem disabled>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AccessTime fontSize="small" />
+                Checking availability...
+              </Box>
+            </MenuItem>
+          ) : (
+            availableTimeSlots.map(time => (
+              <MenuItem key={time} value={time}>{time}</MenuItem>
+            ))
+          )}
+        </Select>
+      </FormControl>
+    </Grid>
+
+    <Grid item xs={12} md={6}>
+      <FormControl 
+        fullWidth 
+        variant="outlined"
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            height: '56px',
+            fontSize: '1.1rem'
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '1.1rem'
+          }
+        }}
+      >
+        <InputLabel>End Time</InputLabel>
+        <Select
+          value={selectedEndTime}
+          onChange={(e) => onEndTimeSelect(e.target.value)}
+          label="End Time"
+          disabled={!selectedStartTime}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                maxHeight: 300,
+                '& .MuiMenuItem-root': {
+                  fontSize: '1.1rem',
+                  py: 1.5
+                }
+              }
+            }
+          }}
+        >
+          {!selectedStartTime ? (
+            <MenuItem disabled>Select start time first</MenuItem>
+          ) : (
+            TIME_SLOTS
+              .filter(time => {
+                if (!selectedStartTime) return false;
+                const startIndex = TIME_SLOTS.indexOf(selectedStartTime);
+                const timeIndex = TIME_SLOTS.indexOf(time);
+                return timeIndex > startIndex && 
+                      timeIndex - startIndex >= (eventSpace?.minHours || 1);
+              })
+              .map(time => (
+                <MenuItem key={time} value={time}>{time}</MenuItem>
+              ))
+          )}
+        </Select>
+      </FormControl>
+    </Grid>
+
+    <Grid item xs={12} sx={{ mt: 2 }}>
+      <TextField
+        fullWidth
+        type="number"
+        label="Party Size"
+        variant="outlined"
+        value={partySize}
+        onChange={(e) => onPartySizeChange(Number(e.target.value))}
+        InputProps={{
+          inputProps: { min: 1, max: eventSpace?.capacity }
+        }}
+        helperText={`Maximum capacity: ${eventSpace?.capacity}`}
+      />
+    </Grid>
+  </Grid>
+);
+
+const PackageStep = ({ 
+  eventPackages, selectedPackageId, onPackageSelect, 
+  selectedDate, selectedStartTime, selectedEndTime, onBack 
+}) => (
+  <Box>
+    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+      <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+        Selected Date & Time
+      </Typography>
+      <Typography color="text.secondary">
+        {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
+        {selectedStartTime && selectedEndTime && `, ${selectedStartTime} - ${selectedEndTime}`}
+      </Typography>
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<Event />}
+        onClick={onBack}
+        sx={{ mt: 1 }}
+      >
+        Change Date & Time
+      </Button>
+    </Box>
+
+    <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+      Select an Event Package
+    </Typography>
+
+    {eventPackages.map(pkg => (
+      <StyledCard
+        key={pkg._id}
+        variant="outlined"
+        onClick={() => onPackageSelect(pkg._id)}
+        sx={{
+          border: selectedPackageId === pkg._id ? 2 : 1,
+          borderColor: selectedPackageId === pkg._id ? 'primary.main' : 'divider'
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={8}>
+              <Typography variant="h6" gutterBottom>
+                {pkg.name}
+              </Typography>
+              <Typography color="text.secondary" paragraph>
+                {pkg.description}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Person sx={{ mr: 1, color: 'text.secondary' }} />
+                <Typography variant="body2" color="text.secondary">
+                  Up to {pkg.maxCapacity} guests
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {pkg.amenities.map((amenity, index) => (
+                  <Chip
+                    key={index}
+                    label={amenity}
+                    size="small"
+                    variant={selectedPackageId === pkg._id ? "filled" : "outlined"}
+                    color={selectedPackageId === pkg._id ? "primary" : "default"}
+                  />
+                ))}
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+              <Typography variant="h5" color="primary" fontWeight="bold">
+                ${pkg.price.toFixed(2)}
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </StyledCard>
+    ))}
+  </Box>
+);
+
+const PersonalDetailsStep = ({
+  selectedPackage, onBack, customerName, onCustomerNameChange,
+  customerEmail, onCustomerEmailChange, customerPhone, onCustomerPhoneChange,
+  specialRequests, onSpecialRequestsChange
+}) => (
+  <Box component="form" onSubmit={(e) => e.preventDefault()}>
+    <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+      <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+        Selected Package
+      </Typography>
+      <Typography color="text.secondary">
+        {selectedPackage?.name} - ${selectedPackage?.price.toFixed(2)}
+      </Typography>
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<Event />}
+        onClick={onBack}
+        sx={{ mt: 1 }}
+      >
+        Change Package
+      </Button>
+    </Box>
+
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          label="Full Name"
+          variant="outlined"
+          value={customerName}
+          onChange={(e) => onCustomerNameChange(e.target.value)}
+          required
+          error={customerName.trim() === ''}
+          helperText={customerName.trim() === '' ? 'Name is required' : ''}
+          inputProps={{
+            maxLength: 100
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          type="email"
+          label="Email"
+          variant="outlined"
+          value={customerEmail}
+          onChange={(e) => onCustomerEmailChange(e.target.value)}
+          required
+          error={customerEmail.trim() === ''}
+          helperText={customerEmail.trim() === '' ? 'Email is required' : ''}
+          inputProps={{
+            maxLength: 100
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <TextField
+          fullWidth
+          label="Phone Number"
+          variant="outlined"
+          value={customerPhone}
+          onChange={(e) => onCustomerPhoneChange(e.target.value)}
+          required
+          error={customerPhone.trim() === ''}
+          helperText={customerPhone.trim() === '' ? 'Phone number is required' : ''}
+          inputProps={{
+            maxLength: 20
+          }}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          label="Special Requests"
+          variant="outlined"
+          value={specialRequests}
+          onChange={(e) => onSpecialRequestsChange(e.target.value)}
+          placeholder="Any special requirements or requests for your event..."
+          inputProps={{
+            maxLength: 500
+          }}
+        />
+      </Grid>
+    </Grid>
+  </Box>
+);
+
+// Main Component
 const EventBookingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [bookingComplete, setBookingComplete] = useState(false);
+  const [bookingRef, setBookingRef] = useState('');
+  
+  // Form state
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedStartTime, setSelectedStartTime] = useState('');
   const [selectedEndTime, setSelectedEndTime] = useState('');
@@ -137,24 +455,29 @@ const EventBookingPage = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
-  const [currentStep, setCurrentStep] = useState(1);
-  const [bookingComplete, setBookingComplete] = useState(false);
-  const [bookingRef, setBookingRef] = useState('');
+  
+  // UI state
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-
-  const steps = ['Date & Time', 'Package Selection', 'Personal Details'];
 
   // Fetch event space data
   const { data: eventSpace, isLoading: isLoadingEventSpace } = useQuery({
     queryKey: ['eventSpace', id],
     queryFn: async () => {
-      const response = await axios.get(`/api/event-reservations/${id}`);
+      const response = await axios.get(`/api/event-reservations/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      if (!response.data) {
+        throw new Error('Event space not found');
+      }
       return response.data;
     },
     onError: (error) => {
       console.error('Error fetching event space:', error);
       toast.error('Failed to load event space details');
+      navigate('/event-spaces');
     }
   });
 
@@ -162,7 +485,11 @@ const EventBookingPage = () => {
   const { data: eventPackages = [], isLoading: isLoadingPackages } = useQuery({
     queryKey: ['eventPackages', eventSpace?.restaurantId],
     queryFn: async () => {
-      const response = await axios.get(`/api/event-packages/${eventSpace?.restaurantId}`);
+      const response = await axios.get(`/api/event-bookings/event-packages/${eventSpace?.restaurantId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
       return response.data;
     },
     enabled: !!eventSpace?.restaurantId,
@@ -172,57 +499,32 @@ const EventBookingPage = () => {
     }
   });
 
-  const selectedPackage = eventPackages.find(pkg => pkg.id === selectedPackageId);
+  const selectedPackage = eventPackages.find(pkg => pkg._id === selectedPackageId);
 
-  const isDateAvailable = async (date) => {
-    try {
-      const startDateTime = new Date(date);
-      startDateTime.setHours(9, 0, 0, 0);
-      const endDateTime = new Date(date);
-      endDateTime.setHours(21, 0, 0, 0);
-      
-      const response = await axios.get('/api/event-bookings/check-availability', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        },
-        params: {
-          eventSpaceId: id,
-          startDateTime: startDateTime.toISOString(),
-          endDateTime: endDateTime.toISOString()
-        }
-      });
-      
-      return response.data.isAvailable;
-    } catch (error) {
-      console.error('Error checking date availability:', error);
-      toast.error('Failed to check date availability');
-      return false;
-    }
-  };
-
+  // Availability checking
   const checkTimeSlotAvailability = useCallback(async (date) => {
     if (!date || !eventSpace) return;
     setIsCheckingAvailability(true);
     
     try {
       const availableSlots = [];
-      for (let i = 0; i < mockTimeSlots.length - 1; i++) {
-        const startTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i]}`);
-        const endTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i + eventSpace.minHours]}`);
+      for (let i = 0; i < TIME_SLOTS.length - 1; i++) {
+        const startTime = new Date(`${format(date, 'yyyy-MM-dd')} ${TIME_SLOTS[i]}`);
+        const endTime = new Date(`${format(date, 'yyyy-MM-dd')} ${TIME_SLOTS[i + eventSpace.minHours]}`);
         
         const response = await axios.get('/api/event-bookings/check-availability', {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`
           },
           params: {
-            eventSpaceId: id,
+            eventSpaceId: eventSpace.id,
             startDateTime: startTime.toISOString(),
             endDateTime: endTime.toISOString()
           }
         });
 
-        if (response.data.isAvailable) {
-          availableSlots.push(mockTimeSlots[i]);
+        if (response.data.available) {
+          availableSlots.push(TIME_SLOTS[i]);
         }
       }
       setAvailableTimeSlots(availableSlots);
@@ -234,6 +536,7 @@ const EventBookingPage = () => {
     }
   }, [id, eventSpace?.minHours]);
 
+  // Event handlers
   const handleDateSelect = async (date) => {
     setSelectedDate(date);
     setSelectedStartTime('');
@@ -243,145 +546,114 @@ const EventBookingPage = () => {
     }
   };
 
-  const handleContinueToPackages = () => {
-    if (!selectedDate || !selectedStartTime || !selectedEndTime) {
-      toast.error('Please select a date and time for your event');
-      return;
+  const validateBookingData = () => {
+    const errors = [];
+    if (!eventSpace?.id) errors.push('Event space not found');
+    if (!eventSpace?.restaurantId) errors.push('Restaurant information is missing');
+    if (!customerName.trim()) errors.push('Name is required');
+    if (!customerEmail.trim()) errors.push('Email is required');
+    if (!customerPhone.trim()) errors.push('Phone number is required');
+    if (!selectedDate) errors.push('Date is required');
+    if (!selectedStartTime) errors.push('Start time is required');
+    if (!selectedEndTime) errors.push('End time is required');
+    if (!selectedPackageId) errors.push('Please select a package');
+    if (!partySize || partySize < 1) errors.push('Please enter a valid party size');
+
+    if (errors.length > 0) {
+      errors.forEach(error => toast.error(error));
+      return false;
     }
-    setCurrentStep(2);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+
+    const phoneRegex = /^\+?[\d\s-]{10,}$/;
+    if (!phoneRegex.test(customerPhone.trim())) {
+      toast.error('Please enter a valid phone number');
+      return false;
+    }
+
+    return true;
   };
 
-  const handleContinueToDetails = async () => { // Marking the function as async
-    const errors = []; // Ensure errors array is defined
-    if (!selectedPackageId) {
-      if (!customerPhone.trim()) errors.push('Phone number is required');
-      if (!selectedDate) errors.push('Date is required');
-      if (!selectedStartTime) errors.push('Start time is required');
-      if (!selectedEndTime) errors.push('End time is required');
-      if (!selectedPackageId) errors.push('Please select a package');
+  const handleBookEvent = async () => {
+    console.log('handleBookEvent called');
+    if (!validateBookingData()) {
+      console.log('Validation failed');
+      return;
+    }
 
-      if (errors.length > 0) {
-        errors.forEach(error => toast.error(error));
+    try {
+      // Format dates properly
+      const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
+      const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
+      console.log('Formatted dates:', { startTime, endTime });
+      
+      // Calculate total price
+      const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
+      const packagePrice = selectedPackage?.price || 0;
+      const hourlyRate = eventSpace?.pricePerHour || 0;
+      const totalPrice = packagePrice + (hours * hourlyRate);
+      console.log('Price calculation:', { hours, packagePrice, hourlyRate, totalPrice });
+
+      // Ensure we have all required IDs
+      if (!eventSpace?.id || !eventSpace?.restaurantId || !selectedPackageId) {
+        console.log('Missing required IDs:', {
+          eventSpaceId: eventSpace?.id,
+          restaurantId: eventSpace?.restaurantId,
+          selectedPackageId
+        });
+        toast.error('Missing required information. Please try again.');
         return;
       }
 
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(customerEmail)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
-
-      // Phone validation
-      const phoneRegex = /^\+?[\d\s-]{10,}$/;
-      if (!phoneRegex.test(customerPhone)) {
-        toast.error('Please enter a valid phone number');
-        return;
-      }
+      const bookingData = {
+        eventSpaceId: eventSpace.id.toString(),
+        restaurantId: eventSpace.restaurantId.toString(),
+        eventPackageId: selectedPackageId.toString(),
+        startDateTime: startTime.toISOString(),
+        endDateTime: endTime.toISOString(),
+        numberOfGuests: parseInt(partySize, 10),
+        totalPrice: parseFloat(totalPrice.toFixed(2)),
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim().toLowerCase(),
+        customerPhone: customerPhone.trim(),
+        specialRequests: specialRequests.trim()
+      };
+      console.log('Prepared booking data:', bookingData);
 
       try {
-        // Check availability
-        const isAvailable = await checkEventSpaceAvailability(
-          eventSpace.id,
-          new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`),
-          new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`)
-        );
-
-        if (!isAvailable.available) {
-          toast.error('This time slot is no longer available. Please select a different time.');
-          return;
+        console.log('Calling createEventBooking API...');
+        const response = await createEventBooking(bookingData);
+        console.log('API response:', response);
+        
+        if (!response?._id) {
+          console.error('Invalid response - no _id:', response);
+          throw new Error('Invalid response from server');
         }
-
-        // Create booking
-        const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
-        const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
-        const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
-        const totalPrice = (selectedPackage.price || 0) + (hours * eventSpace.pricePerHour);
-
-        const bookingData = {
-          eventSpaceId: eventSpace.id,
-          startDateTime: startTime,
-          endDateTime: endTime,
-          numberOfGuests: partySize,
-          eventPackageId: selectedPackageId,
-          totalPrice,
-          customerName: customerName.trim(),
-          customerEmail: customerEmail.trim(),
-          customerPhone: customerPhone.trim(),
-          specialRequests: specialRequests.trim(),
-          restaurantId: eventSpace.restaurantId
-        };
-
-        const booking = await createEventBooking(bookingData);
-        setBookingRef(booking.id);
-
+        
+        setBookingRef(response._id);
         toast.success('Your event has been booked successfully!');
         setBookingComplete(true);
       } catch (error) {
-        console.error('Booking error:', error);
-        toast.error(error.response?.data?.error || 'Failed to create booking. Please try again.');
+        console.error('API Error:', error);
+        console.error('Error details:', {
+          message: error?.message,
+          response: error?.response,
+          data: error?.response?.data
+        });
+        const errorMessage = error?.response?.data?.error || error?.message || 'Failed to create booking';
+        toast.error(errorMessage);
+        throw error;
       }
-    }
-  };
-
-  const handleContactRestaurant = () => {
-    toast.success('Message sent to restaurant. They will contact you shortly.');
-  };
-
-  // Define the checkEventSpaceAvailability function
-  const checkEventSpaceAvailability = async (eventSpaceId, startDateTime, endDateTime) => {
-    try {
-      const response = await axios.get('/api/event-bookings/check-availability', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        },
-        params: {
-          eventSpaceId,
-          startDateTime: startDateTime.toISOString(),
-          endDateTime: endDateTime.toISOString(),
-        },
-      });
-      return response.data;
     } catch (error) {
-      console.error('Error checking event space availability:', error);
-      throw new Error('Failed to check event space availability');
-    }
-  };
-
-  // Define the handleBookEvent function
-  const handleBookEvent = async () => {
-    if (!selectedPackageId || !selectedDate || !selectedStartTime || !selectedEndTime) {
-      toast.error('Please complete all required fields before booking.');
-      return;
-    }
-
-    try {
-      const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
-      const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
-      const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
-      const totalPrice = (selectedPackage?.price || 0) + (hours * eventSpace?.pricePerHour);
-
-      const bookingData = {
-        eventSpaceId: eventSpace?.id,
-        startDateTime: startTime,
-        endDateTime: endTime,
-        numberOfGuests: partySize,
-        eventPackageId: selectedPackageId,
-        totalPrice,
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
-        customerPhone: customerPhone.trim(),
-        specialRequests: specialRequests.trim(),
-        restaurantId: eventSpace?.restaurantId,
-      };
-
-      const booking = await createEventBooking(bookingData);
-      setBookingRef(booking.id);
-      toast.success('Your event has been booked successfully!');
-      setBookingComplete(true);
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      toast.error('Failed to create booking. Please try again.');
+      console.error('Booking error:', error);
+      console.error('Error stack:', error?.stack);
+      toast.error('An unexpected error occurred. Please try again.');
+      throw error;
     }
   };
 
@@ -401,7 +673,7 @@ const EventBookingPage = () => {
             customerPhone={customerPhone}
             specialRequests={specialRequests}
             partySize={partySize}
-            onContactRestaurant={handleContactRestaurant}
+            onContactRestaurant={() => toast.success('Message sent to restaurant. They will contact you shortly.')}
           />
         </StyledContainer>
       </Layout>
@@ -437,7 +709,7 @@ const EventBookingPage = () => {
         <StyledPaper>
           <Box sx={{ width: '100%' }}>
             <Stepper activeStep={currentStep - 1} alternativeLabel>
-              {steps.map((label) => (
+              {STEPS.map((label) => (
                 <Step key={label}>
                   <StepLabel>{label}</StepLabel>
                 </Step>
@@ -445,240 +717,47 @@ const EventBookingPage = () => {
             </Stepper>
 
             <Box sx={{ mt: 4, mb: 2 }}>
-              {/* Step 1: Date & Time */}
               {currentStep === 1 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <LocalizationProvider dateAdapter={AdapterDateFns}>
-                      <DatePicker
-                        label="Select Date"
-                        value={selectedDate}
-                        onChange={handleDateSelect}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            variant: "outlined",
-                            sx: { mb: 2 }
-                          }
-                        }}
-                        disablePast
-                        shouldDisableDate={(date) => !isDateAvailable(date)}
-                      />
-                    </LocalizationProvider>
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>Start Time</InputLabel>
-                      <Select
-                        value={selectedStartTime}
-                        onChange={(e) => setSelectedStartTime(e.target.value)}
-                        label="Start Time"
-                        disabled={isCheckingAvailability}
-                      >
-                        {isCheckingAvailability ? (
-                          <MenuItem disabled>
-                            <LoadingIndicator>
-                              <AccessTime fontSize="small" />
-                              Checking availability...
-                            </LoadingIndicator>
-                          </MenuItem>
-                        ) : (
-                          availableTimeSlots.map(time => (
-                            <MenuItem key={time} value={time}>{time}</MenuItem>
-                          ))
-                        )}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>End Time</InputLabel>
-                      <Select
-                        value={selectedEndTime}
-                        onChange={(e) => setSelectedEndTime(e.target.value)}
-                        label="End Time"
-                        disabled={!selectedStartTime}
-                      >
-                        {!selectedStartTime ? (
-                          <MenuItem disabled>Select start time first</MenuItem>
-                        ) : (
-                          mockTimeSlots
-                            .filter(time => {
-                              if (!selectedStartTime) return false;
-                              const startIndex = mockTimeSlots.indexOf(selectedStartTime);
-                              const timeIndex = mockTimeSlots.indexOf(time);
-                              return timeIndex > startIndex && 
-                                    timeIndex - startIndex >= eventSpace?.minHours;
-                            })
-                            .map(time => (
-                              <MenuItem key={time} value={time}>{time}</MenuItem>
-                            ))
-                        )}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Party Size"
-                      variant="outlined"
-                      value={partySize}
-                      onChange={(e) => setPartySize(Number(e.target.value))}
-                      InputProps={{
-                        inputProps: { min: 1, max: eventSpace?.capacity }
-                      }}
-                      helperText={`Maximum capacity: ${eventSpace?.capacity}`}
-                    />
-                  </Grid>
-                </Grid>
+                <DateTimeStep
+                  selectedDate={selectedDate}
+                  onDateSelect={handleDateSelect}
+                  selectedStartTime={selectedStartTime}
+                  onStartTimeSelect={setSelectedStartTime}
+                  selectedEndTime={selectedEndTime}
+                  onEndTimeSelect={setSelectedEndTime}
+                  partySize={partySize}
+                  onPartySizeChange={setPartySize}
+                  availableTimeSlots={availableTimeSlots}
+                  isCheckingAvailability={isCheckingAvailability}
+                  eventSpace={eventSpace}
+                />
               )}
 
-              {/* Step 2: Package Selection */}
               {currentStep === 2 && (
-                <Box>
-                  <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                      Selected Date & Time
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
-                      {selectedStartTime && selectedEndTime && `, ${selectedStartTime} - ${selectedEndTime}`}
-                    </Typography>
-                    <Button
-                      variant="text"
-                      size="small"
-                      startIcon={<Event />}
-                      onClick={() => setCurrentStep(1)}
-                      sx={{ mt: 1 }}
-                    >
-                      Change Date & Time
-                    </Button>
-                  </Box>
-
-                  <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                    Select an Event Package
-                  </Typography>
-
-                  {eventPackages.map(pkg => (
-                    <StyledCard
-                      key={pkg.id}
-                      variant="outlined"
-                      onClick={() => setSelectedPackageId(pkg.id)}
-                      sx={{
-                        border: selectedPackageId === pkg.id ? 2 : 1,
-                        borderColor: selectedPackageId === pkg.id ? 'primary.main' : 'divider'
-                      }}
-                    >
-                      <CardContent sx={{ p: 3 }}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} sm={8}>
-                            <Typography variant="h6" gutterBottom>
-                              {pkg.name}
-                            </Typography>
-                            <Typography color="text.secondary" paragraph>
-                              {pkg.description}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                              <Person sx={{ mr: 1, color: 'text.secondary' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                Up to {pkg.maxCapacity} guests
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                              {pkg.amenities.map((amenity, index) => (
-                                <Chip
-                                  key={index}
-                                  label={amenity}
-                                  size="small"
-                                  variant={selectedPackageId === pkg.id ? "filled" : "outlined"}
-                                  color={selectedPackageId === pkg.id ? "primary" : "default"}
-                                />
-                              ))}
-                            </Box>
-                          </Grid>
-                          <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
-                            <Typography variant="h5" color="primary" fontWeight="bold">
-                              ${pkg.price.toFixed(2)}
-                            </Typography>
-                          </Grid>
-                        </Grid>
-                      </CardContent>
-                    </StyledCard>
-                  ))}
-                </Box>
+                <PackageStep
+                  eventPackages={eventPackages}
+                  selectedPackageId={selectedPackageId}
+                  onPackageSelect={setSelectedPackageId}
+                  selectedDate={selectedDate}
+                  selectedStartTime={selectedStartTime}
+                  selectedEndTime={selectedEndTime}
+                  onBack={() => setCurrentStep(1)}
+                />
               )}
 
-              {/* Step 3: Personal Details */}
               {currentStep === 3 && (
-                <Box>
-                  <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                      Selected Package
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {selectedPackage?.name} - ${selectedPackage?.price.toFixed(2)}
-                    </Typography>
-                    <Button
-                      variant="text"
-                      size="small"
-                      startIcon={<Event />}
-                      onClick={() => setCurrentStep(2)}
-                      sx={{ mt: 1 }}
-                    >
-                      Change Package
-                    </Button>
-                  </Box>
-
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Full Name"
-                        variant="outlined"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        required
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        type="email"
-                        label="Email"
-                        variant="outlined"
-                        value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
-                        required
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Phone Number"
-                        variant="outlined"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        required
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        label="Special Requests"
-                        variant="outlined"
-                        value={specialRequests}
-                        onChange={(e) => setSpecialRequests(e.target.value)}
-                        placeholder="Any special requirements or requests for your event..."
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
+                <PersonalDetailsStep
+                  selectedPackage={selectedPackage}
+                  onBack={() => setCurrentStep(2)}
+                  customerName={customerName}
+                  onCustomerNameChange={setCustomerName}
+                  customerEmail={customerEmail}
+                  onCustomerEmailChange={setCustomerEmail}
+                  customerPhone={customerPhone}
+                  onCustomerPhoneChange={setCustomerPhone}
+                  specialRequests={specialRequests}
+                  onSpecialRequestsChange={setSpecialRequests}
+                />
               )}
 
               <Box sx={{ mt: 4 }}>
@@ -687,14 +766,53 @@ const EventBookingPage = () => {
                   color="primary"
                   fullWidth
                   size="large"
-                  onClick={currentStep === 1 ? handleContinueToPackages : 
-                          currentStep === 2 ? handleContinueToDetails : 
-                          handleBookEvent}
+                  type={currentStep === 3 ? "submit" : "button"}
                   disabled={
-                    (currentStep === 1 && (!selectedDate || !selectedStartTime || !selectedEndTime)) ||
-                    (currentStep === 2 && !selectedPackageId) ||
-                    (currentStep === 3 && (!customerName || !customerEmail || !customerPhone))
+                    isLoadingEventSpace || 
+                    isLoadingPackages || 
+                    (currentStep === 3 && (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()))
                   }
+                  onClick={async (e) => {
+                    if (currentStep === 3) {
+                      e.preventDefault();
+                    }
+                    
+                    console.log('Button clicked, current step:', currentStep);
+                    try {
+                      if (currentStep === 1) {
+                        if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+                          toast.error('Please select a date and time for your event');
+                          return;
+                        }
+                        console.log('Moving to step 2');
+                        setCurrentStep(2);
+                      } else if (currentStep === 2) {
+                        if (!selectedPackageId) {
+                          toast.error('Please select a package');
+                          return;
+                        }
+                        console.log('Moving to step 3');
+                        setCurrentStep(3);
+                      } else {
+                        console.log('Attempting to book event with data:', {
+                          eventSpaceId: eventSpace?.id,
+                          restaurantId: eventSpace?.restaurantId,
+                          selectedPackageId,
+                          customerName,
+                          customerEmail,
+                          customerPhone,
+                          partySize,
+                          selectedDate: selectedDate?.toISOString(),
+                          selectedStartTime,
+                          selectedEndTime
+                        });
+                        await handleBookEvent();
+                      }
+                    } catch (error) {
+                      console.error('Error in button click handler:', error);
+                      toast.error('An error occurred. Please try again.');
+                    }
+                  }}
                 >
                   {currentStep === 1 ? 'Continue to Packages' :
                    currentStep === 2 ? 'Continue to Details' :

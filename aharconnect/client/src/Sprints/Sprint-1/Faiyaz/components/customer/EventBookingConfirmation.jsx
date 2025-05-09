@@ -52,9 +52,9 @@ export const EventBookingConfirmation = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Venue</h3>
-                <p className="font-medium">{eventSpace.name}</p>
-                <p className="text-sm text-gray-600">{eventSpace.restaurantName}</p>
-                <p className="text-sm text-gray-600">{eventSpace.address}</p>
+                <p className="font-medium">{eventSpace?.name}</p>
+                <p className="text-sm text-gray-600">{eventSpace?.restaurantName}</p>
+                <p className="text-sm text-gray-600">{eventSpace?.address}</p>
               </div>
               
               <div>
@@ -71,10 +71,10 @@ export const EventBookingConfirmation = ({
               <div className="bg-gray-50 border rounded-md p-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{eventPackage.name}</p>
-                    <p className="text-sm text-gray-600">{eventPackage.description}</p>
+                    <p className="font-medium">{eventPackage?.name}</p>
+                    <p className="text-sm text-gray-600">{eventPackage?.description}</p>
                   </div>
-                  <p className="font-bold">${eventPackage.price.toFixed(2)}</p>
+                  <p className="font-bold">${eventPackage?.price?.toFixed(2)}</p>
                 </div>
                 
                 <div className="mt-2">

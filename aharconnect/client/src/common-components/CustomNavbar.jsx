@@ -49,23 +49,39 @@ function CustomNavbar() {
                             Event Spaces
                         </Nav.Link>
 
-                        {/* Restaurant Dashboard - Only visible when logged in as restaurant */}
-                        {loggedIn && userType === 'restaurant' && (
-                            <Nav.Link 
-                                as={Link} 
-                                to="/restaurant-dashboard" 
-                                className={location.pathname === '/restaurant-dashboard' ? 'active' : ''}
-                            >
-                                Dashboard
-                            </Nav.Link>
-                        )}
-
-                        {/* Authentication */}
+                        {/* Authentication and User-specific Routes */}
                         {loggedIn ? (
                             <>
-                                <Nav.Link as={Link} to="/checkout" className={location.pathname === '/checkout' ? 'active' : ''}>
-                                    Checkout
+                                {/* Restaurant Dashboard - Only for restaurant users */}
+                                {userType === 'restaurant' && (
+                                    <Nav.Link 
+                                        as={Link} 
+                                        to="/restaurant-dashboard" 
+                                        className={location.pathname === '/restaurant-dashboard' ? 'active' : ''}
+                                    >
+                                        Dashboard
+                                    </Nav.Link>
+                                )}
+
+                                {/* Profile - For all logged-in users */}
+                                <Nav.Link 
+                                    as={Link} 
+                                    to={userType === 'restaurant' ? "/restaurant-profile" : "/foodie-profile"} 
+                                    className={location.pathname.includes('profile') ? 'active' : ''}
+                                >
+                                    Profile
                                 </Nav.Link>
+
+                                {/* Messages - For all logged-in users */}
+                                <Nav.Link 
+                                    as={Link} 
+                                    to="/messages" 
+                                    className={location.pathname === '/messages' ? 'active' : ''}
+                                >
+                                    Messages
+                                </Nav.Link>
+
+                                {/* Logout for all authenticated users */}
                                 <Nav.Link onClick={handleLogout} className="logout-link">
                                     Logout
                                 </Nav.Link>

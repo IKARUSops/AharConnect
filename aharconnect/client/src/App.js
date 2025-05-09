@@ -22,6 +22,11 @@ import BookEventSpacePage from "./pages/customer/BookEventSpacePage";
 import RestaurantDashboard from "./Sprints/Sprint-2/RestaurantDashboard/RestaurantDashboard";
 import { CartProvider } from "./Sprints/Sprint-1/Faiyaz/context/CartContext";
 
+// Profile and Messages pages
+import RestaurantProfile from "./pages/profile/RestaurantProfile";
+import FoodieProfile from "./pages/profile/FoodieProfile";
+import Messages from "./pages/messages/Messages";
+
 // Commented out imports for missing files
 // import Index from "./Sprints/Sprint-1/Faiyaz/pages/Index";
 // import NotFound from "./Sprints/Sprint-1/Faiyaz/pages/NotFound";
@@ -101,6 +106,13 @@ function App() {
                   
                 {/* Restaurant Dashboard Route */}
                 <Route path="/restaurant-dashboard" element={<RestaurantDashboard />} />
+
+                {/* Profile Routes */}
+                <Route path="/restaurant-profile" element={<RestaurantProfile />} />
+                <Route path="/foodie-profile" element={<FoodieProfile />} />
+
+                {/* Messages Route */}
+                <Route path="/messages" element={<Messages />} />
               </Routes>
             </Box>
             <Footer />
