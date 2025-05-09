@@ -145,7 +145,7 @@ const RestaurantDetailPage = (props) => {
           <p className="lead">{restaurant.address}</p>
           <div className="d-flex flex-wrap gap-2 mb-4">
             {restaurant.cuisineType?.map((cuisine, index) => (
-              <Badge key={index} color="primary" variant="outlined">
+              <Badge key={index} color="primary" variant="outlined" style={{ color: 'var(--bs-vibrant-purple, #9754CB)', borderColor: 'var(--bs-vibrant-purple, #9754CB)' }}>
                 {cuisine}
               </Badge>
             ))}
@@ -184,7 +184,9 @@ const RestaurantDetailPage = (props) => {
                     <div className="row">
                       {group.items.map(item => (
                         <div key={item._id} className="col-md-4">
-                          <Card className="p-3 mb-3">
+                          <Card className="p-3 mb-3" style={{ backgroundColor: 'var(--bs-light-lavender, #DEACFS)', borderColor: 'var(--bs-vibrant-purple, #9754CB)', transition: 'transform 0.2s', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}>
                             {item.image && (
                               <img
                                 src={item.image}

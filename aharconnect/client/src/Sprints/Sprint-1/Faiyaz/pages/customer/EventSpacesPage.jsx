@@ -343,60 +343,130 @@ const EventSpacesPage = () => {
               <Grid item xs={12} md={6} lg={4} key={`${space.id}-${space.name}`}>
                 <Card 
                   sx={{ 
-                    height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'transform 0.2s',
+                    height: '500px', // Fixed height for consistency
+                    transition: 'all 0.3s ease-in-out',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 8px 24px rgba(40, 16, 78, 0.12)'
                     },
-                    opacity: space.availability === 'Not Available' ? 0.7 : 1
+                    opacity: space.availability === 'Not Available' ? 0.7 : 1,
+                    borderRadius: '12px',
+                    overflow: 'hidden'
                   }}
                 >
                   <CardMedia
                     component="img"
-                    height="200"
+                    height="250" // Fixed image height
                     image={space.images && space.images.length > 0 ? space.images[0] : '/uploads/placeholder-image.jpg'}
-                    alt={space.name || 'Event Space'}
+                    alt={space.name}
+                    sx={{
+                      objectFit: 'cover'
+                    }}
                   />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography gutterBottom variant="h5" component="h2">
+                  <CardContent sx={{ 
+                    flexGrow: 1, 
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '200px', // Fixed content height
+                  }}>
+                    <Typography gutterBottom variant="h5" component="h2" sx={{ 
+                      color: '#28104E',
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: '1.25rem',
+                      lineHeight: 1.2
+                    }}>
                       {space.name}
                     </Typography>
-                    <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                    <Typography variant="subtitle1" sx={{ 
+                      color: '#6237A0', 
+                      mb: 2,
+                      fontSize: '1rem'
+                    }}>
                       {space.restaurantName}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" paragraph>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mb: 'auto',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        fontSize: '0.875rem',
+                        lineHeight: 1.5
+                      }}
+                    >
                       {space.description}
                     </Typography>
-                    <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                    <Stack direction="row" spacing={1} sx={{ 
+                      mb: 2,
+                      flexWrap: 'wrap',
+                      gap: 1,
+                      mt: 'auto'
+                    }}>
                       <Chip 
-                        icon={<Users />} 
+                        icon={<Users size={16} />} 
                         label={`${space.capacity} people`} 
-                        size="small" 
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(151, 84, 203, 0.1)',
+                          color: '#6237A0',
+                          '& .MuiChip-icon': {
+                            color: '#6237A0'
+                          }
+                        }}
                       />
                       <Chip 
-                        icon={<CalendarCheck />} 
-                        label={`${space.bookingDuration} min slots`} 
-                        size="small" 
-                      />
-                      <Chip 
-                        icon={<MapPin />} 
+                        icon={<MapPin size={16} />} 
                         label={space.address} 
-                        size="small" 
+                        size="small"
+                        sx={{
+                          bgcolor: 'rgba(151, 84, 203, 0.1)',
+                          color: '#6237A0',
+                          '& .MuiChip-icon': {
+                            color: '#6237A0'
+                          }
+                        }}
                       />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      Book up to {space.advanceBookingDays} days in advance
+                    <Typography variant="h6" sx={{ 
+                      color: '#28104E', 
+                      fontWeight: 600,
+                      fontSize: '1.1rem'
+                    }}>
+                      ${space.pricePerHour}/hour
                     </Typography>
                   </CardContent>
-                  <CardActions>
+                  <CardActions sx={{ 
+                    p: 3, 
+                    pt: 0,
+                    height: '50px' // Fixed actions height
+                  }}>
                     <Button 
                       component={Link} 
                       to={`/events/book/${space.id}`}
                       variant="contained" 
                       fullWidth
                       disabled={space.availability === 'Not Available'}
+                      sx={{
+                        bgcolor: '#6237A0',
+                        color: 'white',
+                        '&:hover': {
+                          bgcolor: '#9754CB'
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'rgba(98, 55, 160, 0.3)'
+                        },
+                        borderRadius: '8px',
+                        py: 1,
+                        textTransform: 'none',
+                        fontWeight: 600
+                      }}
                     >
                       {space.availability === 'Not Available' ? 'Not Available' : 'Book Now'}
                     </Button>
