@@ -36,15 +36,15 @@ app.use('/api/reservations', reservationRoutes);
 // Restaurant profile routes
 app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {
   try {
-    console.log('Fetching profile for user:', req.user._id);
+
     const restaurant = await Restaurant.findOne({ user: req.user._id });
     
     if (!restaurant) {
-      console.log('No profile found for user:', req.user._id);
+
       return res.json(null); // Return null instead of 404 to indicate no profile exists
     }
     
-    console.log('Found profile:', restaurant);
+
     res.json(restaurant);
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -54,8 +54,7 @@ app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {
 
 app.put('/api/restaurants/profile', authMiddleware, async (req, res) => {
   try {
-    console.log('Received profile update request:', req.body);
-    console.log('User ID:', req.user._id);
+
 
     const {
       name,
@@ -108,7 +107,7 @@ app.put('/api/restaurants/profile', authMiddleware, async (req, res) => {
       await restaurant.save();
     }
 
-    console.log('Profile updated successfully:', restaurant);
+
     res.json(restaurant);
   } catch (error) {
     console.error('Profile update error:', error);
@@ -144,7 +143,7 @@ const upload = multer({
 app.post('/api/expenses', (req, res) => {
   // Handle the expense data sent in the request body here.
   // For example, you might want to save it to a database.
-  console.log('Received expense data:', req.body); // Debug output
+
   res.status(201).send({ message: 'Expense created successfully' }); // Respond with a 201 status to confirm the expense was created.
 });
 
@@ -158,7 +157,7 @@ app.post('/api/menu', upload.single('image'), (req, res) => {
   //   .then(item => res.status(201).json(item))
   //   .catch(err => res.status(500).json({ error: err.message }));
 
-    console.log('Menu item created:', { name, description, price, imagePath });
+
     res.status(201).send({ message: 'Menu item created successfully', imagePath });
 });
 

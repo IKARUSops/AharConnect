@@ -132,7 +132,7 @@ exports.getStatistics = async (req, res) => {
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
-    console.log('Total Expenses:', totalExpenses);
+    
 
     // Get expenses by category
     const categoryBreakdown = await Expense.aggregate([
@@ -141,7 +141,7 @@ exports.getStatistics = async (req, res) => {
       { $sort: { total: -1 } }
     ]);
 
-    console.log('Category Breakdown:', categoryBreakdown);
+    
 
     // Get daily trends
     const dailyTrends = await Expense.aggregate([
@@ -155,7 +155,7 @@ exports.getStatistics = async (req, res) => {
       { $sort: { _id: 1 } }
     ]);
 
-    console.log('Daily Trends:', dailyTrends);
+    
 
     res.json({
       success: true,

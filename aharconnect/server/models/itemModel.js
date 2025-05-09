@@ -7,6 +7,7 @@ const itemSchema = new mongoose.Schema({
   description: { type: String },
   image: { type: String, required: false },
   item_status: { type: String, default: 'available' },
+  restaurant_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });

@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack';
 import AppTheme from '../../../shared-theme/AppTheme';
 import ColorModeSelect from '../../../shared-theme/ColorModeSelect';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const MenuDashboard = () => {
   const [items, setItems] = useState([]);
@@ -14,13 +15,29 @@ const MenuDashboard = () => {
   const [editId, setEditId] = useState(null);
   const categories = ['Cocktails', 'Appetizers', 'Main Course', 'Desserts', 'Beverages'];
 
+  const token = localStorage.getItem('authToken');
+  let restaurantId = null;
+  if (token) {
+    const decodedToken = jwtDecode(token);
+    restaurantId = decodedToken.id;
+  } else {
+    console.error('No token found in localStorage');
+  }
+
   useEffect(() => {
-    fetchItems();
-  }, []);
+    if (restaurantId) {
+      fetchItems();
+    }
+  }, [restaurantId]);
 
   const fetchItems = async () => {
-    const response = await axios.get('http://localhost:5000/api/inventory');
-    setItems(response.data.map(item => ({ id: item._id, ...item })));
+    console.log('Fetching items for restaurantId:', restaurantId); // Log the restaurantId
+    try {
+      const response = await axios.get(`http://localhost:5000/api/inventory/menu/${restaurantId}`);
+      setItems(response.data.map(item => ({ id: item._id, ...item })));
+    } catch (error) {
+      console.error('Error fetching items:', error); // Log the error
+    }
   };
 
   useEffect(() => {
@@ -75,7 +92,12 @@ const MenuDashboard = () => {
     e.preventDefault();
     const url = editId ? `http://localhost:5000/api/inventory/${editId}` : 'http://localhost:5000/api/inventory';
     const method = editId ? 'put' : 'post';
-    await axios[method](url, formData);
+    const payload = { ...formData, restaurant_id: restaurantId };
+
+    // Debugging: Log the payload being sent
+    console.log('Payload being sent:', payload);
+
+    await axios[method](url, payload);
     setOpenForm(false);
     setEditId(null);
     setFormData({ item_name: '', category: '', price: '', description: '', item_status: 'available' });
