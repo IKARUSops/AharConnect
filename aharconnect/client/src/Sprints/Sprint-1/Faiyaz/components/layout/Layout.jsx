@@ -1,14 +1,27 @@
 import React from 'react';
-import Footer from './Footer';
+import { Box } from '@mui/material';
 
 const Layout = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: '100%',
+          mx: 'auto',
+          px: { xs: 2, sm: 3, md: 4 },
+        }}
+      >
         {children}
-      </main>
-      <Footer />
-    </div>
+      </Box>
+    </Box>
   );
 };
 
