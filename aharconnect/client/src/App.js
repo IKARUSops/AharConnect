@@ -90,6 +90,7 @@ function App() {
                 <Route path="/menu-edit" element={<MenuEditDashboard />} />
                 <Route path="/restaurants" element={<RestaurantsPage />} />
                 <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
+                <Route path="/restaurants/:id/menu" element={<RestaurantDetailPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 
                 {/* Event Booking Routes */}

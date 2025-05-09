@@ -1,9 +1,13 @@
 import React from "react";
 import { Card, CardContent, CardMedia, CardActions, Typography, Box, Chip, Rating, Button } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export function RestaurantCard({ restaurant }) {
-  console.log('Rendering RestaurantCard with:', restaurant);
+  const navigate = useNavigate();
+
+  const handleViewMenu = () => {
+    navigate(`/restaurants/${restaurant.user || restaurant.id || restaurant._id}/menu`);
+  };
 
   return (
     <Card 
@@ -92,8 +96,7 @@ export function RestaurantCard({ restaurant }) {
       
       <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
         <Button
-          component={Link}
-          to={`/restaurants/${restaurant.id || restaurant._id}`}
+          onClick={handleViewMenu}
           variant="outlined"
           fullWidth
           sx={{ 
@@ -106,7 +109,7 @@ export function RestaurantCard({ restaurant }) {
         </Button>
         <Button
           component={Link}
-          to={`/restaurants/${restaurant.id}/reserve`}
+          to={`/restaurants/${restaurant.id || restaurant._id}/reserve`}
           variant="contained"
           fullWidth
           sx={{ 

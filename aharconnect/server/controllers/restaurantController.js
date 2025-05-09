@@ -2,6 +2,7 @@
 
 const restaurantService = require('../services/mongoRestaurantService');
 const Restaurant = require('../models/restaurantModel');
+const Item = require('../models/itemModel');
 const multer = require('multer');
 const path = require('path');
 
@@ -207,5 +208,31 @@ exports.uploadPhoto = async (req, res) => {
   } catch (error) {
     console.error('Image upload error:', error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Get menu items for a specific restaurant
+exports.getMenuItems = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const menuItems = await Item.find({ restaurant: restaurantId });
+    res.status(200).json(menuItems);
+  } catch (error) {
+    console.error('Error fetching menu items:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get restaurant by user
+exports.getRestaurantByUser = async (req, res) => {
+  try {
+    const user = req.params.user;
+    const restaurant = await Restaurant.findOne({ user });
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+    res.json(restaurant);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
