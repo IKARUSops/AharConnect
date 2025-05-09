@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Users, CalendarCheck, Filter, Search } from 'lucide-react';
+import axios from 'axios';
 import { 
   Card, 
   CardContent, 
@@ -110,7 +111,48 @@ const EventSpacesPage = () => {
   const { data: eventSpaces = mockEventSpaces } = useQuery({
     queryKey: ['eventSpaces'],
     queryFn: async () => {
-      return mockEventSpaces;
+      try {
+        // Fetch all restaurants
+        const restaurantsResponse = await axios.get('/api/restaurants');
+        const restaurants = restaurantsResponse.data;
+
+        // Fetch reservation settings for each restaurant
+        const spacesWithReservations = await Promise.all(
+          restaurants.map(async (restaurant) => {
+            try {
+              const reservationResponse = await axios.get(`/api/reservations/settings/${restaurant._id}`);
+              return {
+                id: restaurant._id,
+                name: restaurant.name + ' Event Space',
+                restaurantId: restaurant._id,
+                restaurantName: restaurant.name,
+                description: restaurant.description || 'A beautiful event space for your special occasions.',
+                capacity: reservationResponse.data?.maxCapacity || restaurant.capacity || 50,
+                pricePerHour: 300, // Default price
+                minHours: 2, // Default minimum hours
+                availability: reservationResponse.data?.isEnabled ? 'Available' : 'Not Available',
+                amenities: ['Tables & Chairs', 'Sound System', 'Wi-Fi'],
+                images: restaurant.image ? [restaurant.image] : [
+                  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop'
+                ],
+                address: restaurant.address,
+                bookingDuration: reservationResponse.data?.bookingDuration || 60,
+                advanceBookingDays: reservationResponse.data?.advanceBookingDays || 7
+              };
+            } catch (error) {
+              console.error(`Error fetching reservation settings for ${restaurant.name}:`, error);
+              return null;
+            }
+          })
+        );
+
+        // Filter out null values and combine with mock data
+        const validSpaces = spacesWithReservations.filter(space => space !== null);
+        return [...validSpaces, ...mockEventSpaces];
+      } catch (error) {
+        console.error('Error fetching event spaces:', error);
+        return mockEventSpaces;
+      }
     }
   });
 
@@ -327,213 +369,68 @@ const EventSpacesPage = () => {
           </Typography>
 
           <Grid container spacing={4}>
-            {filteredEventSpaces.map(space => (
-              <Grid item xs={12} lg={6} key={space.id}>
+            {filteredEventSpaces.map((space) => (
+              <Grid item xs={12} md={6} lg={4} key={space.id}>
                 <Card 
                   sx={{ 
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'all 0.3s ease',
-                    bgcolor: 'rgba(255,255,255,0.9)',
-                    backdropFilter: 'blur(10px)',
-                    WebkitBackdropFilter: 'blur(10px)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
+                    transition: 'transform 0.2s',
                     '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: (theme) => theme.shadows[8],
-                      '& .MuiCardMedia-root': {
-                        transform: 'scale(1.05)',
-                      },
+                      transform: 'translateY(-4px)',
                     },
+                    opacity: space.availability === 'Not Available' ? 0.7 : 1
                   }}
                 >
-                  <Box sx={{ position: 'relative', height: 280, overflow: 'hidden' }}>
-                    <CardMedia
-                      component="img"
-                      height="280"
-                      image={space.images[0]}
-                      alt={space.name}
-                      sx={{ 
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease',
-                      }}
-                    />
-                    {space.availability === 'Booked' && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          inset: 0,
-                          bgcolor: 'rgba(0, 0, 0, 0.6)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backdropFilter: 'blur(4px)',
-                          WebkitBackdropFilter: 'blur(4px)',
-                        }}
-                      >
-                        <Typography variant="h5" color="white" fontWeight="bold">
-                          Currently Booked
-                        </Typography>
-                      </Box>
-                    )}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        display: 'flex',
-                        gap: 1,
-                      }}
-                    >
-                      <Chip
-                        label={space.availability}
-                        color={space.availability === 'Available' ? 'success' : 'error'}
-                        size="small"
-                        sx={{
-                          bgcolor: space.availability === 'Available' ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)',
-                          color: 'white',
-                          fontWeight: 600,
-                          backdropFilter: 'blur(4px)',
-                          WebkitBackdropFilter: 'blur(4px)',
-                        }}
-                      />
-                    </Box>
-                  </Box>
-
-                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography 
-                        variant="h5" 
-                        component="h3" 
-                        gutterBottom
-                        sx={{ 
-                          fontWeight: 600,
-                          color: 'text.primary',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 1,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {space.name}
-                      </Typography>
-                      <Typography 
-                        variant="subtitle1" 
-                        color="text.secondary"
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          mb: 1,
-                        }}
-                      >
-                        <MapPin size={16} />
-                        {space.restaurantName}
-                      </Typography>
-                    </Box>
-
-                    <Typography 
-                      variant="body1" 
-                      color="text.secondary" 
-                      paragraph
-                      sx={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        mb: 2,
-                      }}
-                    >
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={space.images[0]}
+                    alt={space.name}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography gutterBottom variant="h5" component="h2">
+                      {space.name}
+                    </Typography>
+                    <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                      {space.restaurantName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
                       {space.description}
                     </Typography>
-
-                    <Stack direction="row" spacing={3} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Users size={20} />
-                        <Typography variant="body2" color="text.secondary">
-                          Up to {space.capacity} people
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CalendarCheck size={20} />
-                        <Typography variant="body2" color="text.secondary">
-                          Min. {space.minHours} hours
-                        </Typography>
-                      </Box>
+                    <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                      <Chip 
+                        icon={<Users />} 
+                        label={`${space.capacity} people`} 
+                        size="small" 
+                      />
+                      <Chip 
+                        icon={<CalendarCheck />} 
+                        label={`${space.bookingDuration} min slots`} 
+                        size="small" 
+                      />
+                      <Chip 
+                        icon={<MapPin />} 
+                        label={space.address} 
+                        size="small" 
+                      />
                     </Stack>
-
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                      {space.amenities.slice(0, 3).map((amenity, index) => (
-                        <Chip
-                          key={index}
-                          label={amenity}
-                          size="small"
-                          sx={{ 
-                            bgcolor: 'primary.light',
-                            color: 'primary.dark',
-                            '&:hover': {
-                              bgcolor: 'primary.main',
-                              color: 'primary.contrastText',
-                            },
-                          }}
-                        />
-                      ))}
-                      {space.amenities.length > 3 && (
-                        <Chip
-                          label={`+${space.amenities.length - 3} more`}
-                          size="small"
-                          sx={{ 
-                            bgcolor: 'primary.light',
-                            color: 'primary.dark',
-                            '&:hover': {
-                              bgcolor: 'primary.main',
-                              color: 'primary.contrastText',
-                            },
-                          }}
-                        />
-                      )}
-                    </Box>
-
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      mt: 'auto',
-                      pt: 2,
-                      borderTop: '1px solid',
-                      borderColor: 'divider',
-                    }}>
-                      <Typography 
-                        variant="h6" 
-                        color="primary"
-                        sx={{ fontWeight: 600 }}
-                      >
-                        ${space.pricePerHour}/hour
-                      </Typography>
-                      <Button
-                        component={Link}
-                        to={`/events/book/${space.id}`}
-                        variant="contained"
-                        color="primary"
-                        disabled={space.availability === 'Booked'}
-                        sx={{
-                          borderRadius: 2,
-                          px: 3,
-                          py: 1,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                          '&:hover': {
-                            boxShadow: '0 6px 8px rgba(0,0,0,0.2)',
-                          },
-                        }}
-                      >
-                        Book Now
-                      </Button>
-                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Book up to {space.advanceBookingDays} days in advance
+                    </Typography>
                   </CardContent>
+                  <CardActions>
+                    <Button 
+                      component={Link} 
+                      to={`/events/book/${space.id}`}
+                      variant="contained" 
+                      fullWidth
+                      disabled={space.availability === 'Not Available'}
+                    >
+                      {space.availability === 'Not Available' ? 'Not Available' : 'Book Now'}
+                    </Button>
+                  </CardActions>
                 </Card>
               </Grid>
             ))}

@@ -14,6 +14,8 @@ import {
   Tabs,
   Tab,
   Alert,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   Receipt as ReceiptIcon,
@@ -55,6 +57,7 @@ const RestaurantDashboard = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reservationSettings, setReservationSettings] = useState(null);
 
   // Mock data for when no profile exists
   const mockData = {
@@ -101,6 +104,29 @@ const RestaurantDashboard = () => {
     setOpenProfileDialog(false);
   };
 
+  const handleReservationToggle = async () => {
+    try {
+      const response = await API.post('/reservations/toggle');
+      setReservationSettings(response.data);
+    } catch (error) {
+      console.error('Error toggling reservations:', error);
+      setError('Failed to toggle reservations');
+    }
+  };
+
+  useEffect(() => {
+    const fetchReservationSettings = async () => {
+      try {
+        const response = await API.get('/reservations/settings');
+        setReservationSettings(response.data);
+      } catch (error) {
+        console.error('Error fetching reservation settings:', error);
+      }
+    };
+
+    fetchReservationSettings();
+  }, []);
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -143,6 +169,40 @@ const RestaurantDashboard = () => {
         initialData={profileData}
         onSuccess={handleProfileUpdate}
       />
+
+      {/* Reservation Settings Card */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography variant="h5" gutterBottom>
+            Reservation Settings
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={reservationSettings?.isEnabled ?? false}
+                  onChange={handleReservationToggle}
+                  color="primary"
+                />
+              }
+              label="Enable Reservations"
+            />
+            {reservationSettings && (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Max Capacity: {reservationSettings.maxCapacity} people
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Booking Duration: {reservationSettings.bookingDuration} minutes
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Advance Booking: {reservationSettings.advanceBookingDays} days
+                </Typography>
+              </>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

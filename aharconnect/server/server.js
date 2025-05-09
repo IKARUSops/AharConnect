@@ -12,14 +12,20 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const restaurantRoutes = require('./routes/restaurantRoutes');
+const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use('/uploads', express.static('uploads'));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 // Restaurant profile routes
 app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {
@@ -54,7 +60,8 @@ app.put('/api/restaurants/profile', authMiddleware, async (req, res) => {
       openingHours,
       cuisine,
       capacity,
-      image
+      image,
+      reservationsEnabled
     } = req.body;
 
     let restaurant = await Restaurant.findOne({ user: req.user._id });
@@ -72,7 +79,8 @@ app.put('/api/restaurants/profile', authMiddleware, async (req, res) => {
           openingHours,
           cuisine,
           capacity,
-          image
+          image,
+          reservationsEnabled: reservationsEnabled !== undefined ? reservationsEnabled : restaurant.reservationsEnabled
         },
         { new: true }
       );
@@ -88,7 +96,8 @@ app.put('/api/restaurants/profile', authMiddleware, async (req, res) => {
         openingHours,
         cuisine,
         capacity,
-        image
+        image,
+        reservationsEnabled: reservationsEnabled !== undefined ? reservationsEnabled : true
       });
       await restaurant.save();
     }
@@ -146,9 +155,6 @@ app.post('/api/menu', upload.single('image'), (req, res) => {
     console.log('Menu item created:', { name, description, price, imagePath });
     res.status(201).send({ message: 'Menu item created successfully', imagePath });
 });
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
