@@ -14,8 +14,14 @@ const expenseRoutes = require('./routes/expenseRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
+const eventReservationRoutes = require('./routes/eventReservationRoutes');
 
 const app = express();
+
+
+app.use('/api/event-reservations', eventReservationRoutes);
+
+
 app.use(cors());
 app.use(express.json());
 

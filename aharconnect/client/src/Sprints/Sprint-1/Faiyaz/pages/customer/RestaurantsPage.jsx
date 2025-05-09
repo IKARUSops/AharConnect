@@ -9,6 +9,8 @@ import { mockRestaurants } from '../../lib/mock-data';
 import Layout from '../../components/layout/Layout';
 import LocationBasedRestaurants from '../../components/customer/LocationBasedRestaurants';
 import { Filter, Search, MapPin } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 /**
  * @param {Object} props
@@ -21,17 +23,32 @@ const RestaurantsPage = (props) => {
   const [location, setLocation] = useState("New York");
   const [showFilterMobile, setShowFilterMobile] = useState(false);
 
-  // Get all unique cuisine types from the mock data
+  const { data: apiRestaurants = [] } = useQuery({
+    queryKey: ['restaurants'],
+    queryFn: async () => {
+      try {
+        const response = await axios.get('/api/restaurants');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+        return [];
+      }
+    }
+  });
+
+  const allRestaurants = [...mockRestaurants, ...apiRestaurants];
+
+  // Get all unique cuisine types from the combined data
   const cuisineTypes = Array.from(
-    new Set(mockRestaurants.flatMap(restaurant => restaurant.cuisineType))
+    new Set(allRestaurants.flatMap(restaurant => restaurant.cuisineType))
   );
 
-  // Get all unique price ranges from the mock data
+  // Get all unique price ranges from the combined data
   const priceRanges = Array.from(
-    new Set(mockRestaurants.map(restaurant => restaurant.priceRange))
+    new Set(allRestaurants.map(restaurant => restaurant.priceRange))
   );
 
-  const filteredRestaurants = mockRestaurants.filter(restaurant => {
+  const filteredRestaurants = allRestaurants.filter(restaurant => {
     // Filter by search term
     const matchesSearch = restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       restaurant.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -280,7 +297,7 @@ const RestaurantsPage = (props) => {
             gap: 3
           }}>
             {filteredRestaurants.map(restaurant => (
-              <RestaurantCard key={restaurant.id} restaurant={restaurant} />
+              <RestaurantCard key={restaurant.id || restaurant._id} restaurant={restaurant} />
             ))}
           </Box>
 

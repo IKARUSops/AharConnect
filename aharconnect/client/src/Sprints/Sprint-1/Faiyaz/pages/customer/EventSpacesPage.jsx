@@ -108,61 +108,31 @@ const EventSpacesPage = () => {
     setPartySize(isNaN(value) ? 0 : value);
   };
 
-  const { data: eventSpaces = mockEventSpaces } = useQuery({
+  const { data: apiEventSpaces = [] } = useQuery({
     queryKey: ['eventSpaces'],
     queryFn: async () => {
+      console.log('API call to /api/event-reservations/all initiated');
       try {
-        // Fetch all restaurants
-        const restaurantsResponse = await axios.get('/api/restaurants');
-        const restaurants = restaurantsResponse.data;
-
-        // Fetch reservation settings for each restaurant
-        const spacesWithReservations = await Promise.all(
-          restaurants.map(async (restaurant) => {
-            try {
-              const reservationResponse = await axios.get(`/api/reservations/settings/${restaurant._id}`);
-              return {
-                id: restaurant._id,
-                name: restaurant.name + ' Event Space',
-                restaurantId: restaurant._id,
-                restaurantName: restaurant.name,
-                description: restaurant.description || 'A beautiful event space for your special occasions.',
-                capacity: reservationResponse.data?.maxCapacity || restaurant.capacity || 50,
-                pricePerHour: 300, // Default price
-                minHours: 2, // Default minimum hours
-                availability: reservationResponse.data?.isEnabled ? 'Available' : 'Not Available',
-                amenities: ['Tables & Chairs', 'Sound System', 'Wi-Fi'],
-                images: restaurant.image ? [restaurant.image] : [
-                  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop'
-                ],
-                address: restaurant.address,
-                bookingDuration: reservationResponse.data?.bookingDuration || 60,
-                advanceBookingDays: reservationResponse.data?.advanceBookingDays || 7
-              };
-            } catch (error) {
-              console.error(`Error fetching reservation settings for ${restaurant.name}:`, error);
-              return null;
-            }
-          })
-        );
-
-        // Filter out null values and combine with mock data
-        const validSpaces = spacesWithReservations.filter(space => space !== null);
-        return [...validSpaces, ...mockEventSpaces];
+        const response = await axios.get('/api/event-reservations/all'); // Correct endpoint
+        return response.data;
       } catch (error) {
         console.error('Error fetching event spaces:', error);
-        return mockEventSpaces;
+        return [];
       }
     }
   });
 
+  console.log('Data received from API:', apiEventSpaces);
+
+  const eventSpaces = [...mockEventSpaces, ...apiEventSpaces];
+
   const filteredEventSpaces = eventSpaces.filter(space => {
-    const matchesSearch = space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         space.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         space.restaurantName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = (space.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           space.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           space.restaurantName?.toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesCapacity = capacityFilter === null || space.capacity >= capacityFilter;
-    
+
     return matchesSearch && matchesCapacity;
   });
 
@@ -370,7 +340,7 @@ const EventSpacesPage = () => {
 
           <Grid container spacing={4}>
             {filteredEventSpaces.map((space) => (
-              <Grid item xs={12} md={6} lg={4} key={space.id}>
+              <Grid item xs={12} md={6} lg={4} key={`${space.id}-${space.name}`}>
                 <Card 
                   sx={{ 
                     height: '100%',
@@ -386,8 +356,8 @@ const EventSpacesPage = () => {
                   <CardMedia
                     component="img"
                     height="200"
-                    image={space.images[0]}
-                    alt={space.name}
+                    image={space.images && space.images.length > 0 ? space.images[0] : '/uploads/placeholder-image.jpg'}
+                    alt={space.name || 'Event Space'}
                   />
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography gutterBottom variant="h5" component="h2">

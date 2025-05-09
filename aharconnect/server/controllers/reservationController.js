@@ -1,42 +1,30 @@
 const RestaurantReservation = require('../models/restaurantReservationModel');
 const Restaurant = require('../models/restaurantModel');
 
-// Get reservation settings for a restaurant
-exports.getReservationSettings = async (req, res) => {
+const getReservationSettings = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findOne({ user: req.user._id });
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
+    const reservations = await RestaurantReservation.find({}).populate({
+      path: 'restaurant',
+      select: 'name description image address'
+    });
 
-    let reservationSettings = await RestaurantReservation.findOne({ restaurant: restaurant._id });
-    
-    if (!reservationSettings) {
-      // Create default settings if none exist
-      reservationSettings = new RestaurantReservation({
-        restaurant: restaurant._id,
-        user: req.user._id,
-        maxCapacity: restaurant.capacity || 20,
-        availableTimeSlots: [
-          {
-            startTime: restaurant.openingHours?.opening || '09:00',
-            endTime: restaurant.openingHours?.closing || '22:00',
-            isAvailable: true
-          }
-        ]
-      });
-      await reservationSettings.save();
-    }
+    const transformedReservations = reservations.map(reservation => ({
+      id: reservation._id,
+      name: reservation.restaurant?.name || 'Event Space',
+      description: reservation.restaurant?.description || 'Description not available',
+      image: reservation.restaurant?.image || '/uploads/placeholder-image.jpg',
+      capacity: reservation.maxCapacity,
+      address: reservation.restaurant?.address || 'Address not available',
+    }));
 
-    res.json(reservationSettings);
+    res.status(200).json(transformedReservations);
   } catch (error) {
     console.error('Error fetching reservation settings:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Update reservation settings
-exports.updateReservationSettings = async (req, res) => {
+const updateReservationSettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ user: req.user._id });
     if (!restaurant) {
@@ -87,8 +75,7 @@ exports.updateReservationSettings = async (req, res) => {
   }
 };
 
-// Toggle reservation availability
-exports.toggleReservationAvailability = async (req, res) => {
+const toggleReservationAvailability = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ user: req.user._id });
     if (!restaurant) {
@@ -114,4 +101,10 @@ exports.toggleReservationAvailability = async (req, res) => {
     console.error('Error toggling reservation availability:', error);
     res.status(500).json({ error: 'Server error' });
   }
-}; 
+};
+
+module.exports = {
+  getReservationSettings,
+  updateReservationSettings,
+  toggleReservationAvailability
+};

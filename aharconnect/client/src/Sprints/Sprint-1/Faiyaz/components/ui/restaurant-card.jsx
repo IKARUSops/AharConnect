@@ -59,7 +59,7 @@ export function RestaurantCard({ restaurant }) {
         </Typography>
         
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
-          {restaurant.cuisineType.map((cuisine, index) => (
+          {restaurant.cuisineType?.map((cuisine, index) => (
             <Chip
               key={index}
               label={cuisine}

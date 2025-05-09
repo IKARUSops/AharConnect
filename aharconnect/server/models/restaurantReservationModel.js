@@ -32,6 +32,10 @@ const restaurantReservationSchema = new mongoose.Schema({
     type: Number,
     default: 7
   },
+  image: {
+    type: String,
+    default: '/uploads/placeholder-image.jpg'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -48,4 +52,4 @@ restaurantReservationSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('RestaurantReservation', restaurantReservationSchema); 
+module.exports = mongoose.model('RestaurantReservation', restaurantReservationSchema);
