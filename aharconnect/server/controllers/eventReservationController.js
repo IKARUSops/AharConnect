@@ -29,4 +29,34 @@ const getAllReservations = async (req, res) => {
   }
 };
 
-module.exports = { getAllReservations };
+const getReservationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reservation = await RestaurantReservation.findById(id).populate('restaurant');
+
+    if (!reservation) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    const transformedReservation = {
+      id: reservation._id,
+      name: reservation.restaurant?.name || 'Event Space',
+      description: reservation.restaurant?.description || 'Description not available',
+      pricePerHour: 100, // Placeholder price
+      availability: reservation.isEnabled ? 'Available' : 'Not Available',
+      amenities: ['Wi-Fi', 'Air Conditioning'], // Placeholder amenities
+      images: [reservation.restaurant?.image || '/uploads/placeholder-image.jpg'],
+      address: reservation.restaurant?.address || 'Address not available',
+      capacity: reservation.maxCapacity,
+      minHours: 1, // Placeholder minimum hours
+      restaurantId: reservation.restaurant?._id,
+    };
+
+    res.status(200).json(transformedReservation);
+  } catch (error) {
+    console.error('Error fetching reservation by ID:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { getAllReservations, getReservationById };

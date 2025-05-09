@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 // Material UI imports
 import {
@@ -43,110 +44,10 @@ import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
 import { EventBookingConfirmation } from '../../components/customer/EventBookingConfirmation';
 import { EventSpaceDetails } from '../../components/customer/EventSpaceDetails';
-import { createEventBooking, checkEventSpaceAvailability } from '../../../../../api/eventBookings';
+import { createEventBooking } from '../../../../../api/eventBookings';
+import ErrorBoundary from '../../../../../components/ErrorBoundary';
 
-// Mock event spaces data (copied from EventSpacesPage)
-const mockEventSpaces = [
-  {
-    id: '1',
-    name: 'Grand Hall',
-    restaurantId: '1',
-    restaurantName: 'The Italian Place',
-    description: 'A spacious hall perfect for large gatherings, weddings, and corporate events.',
-    capacity: 200,
-    pricePerHour: 350,
-    minHours: 4,
-    availability: 'Available',
-    amenities: ['Tables & Chairs', 'Sound System', 'Projector', 'Wi-Fi', 'Air Conditioning'],
-    images: [
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=2370&auto=format&fit=crop',
-    ],
-    address: '123 Main St, New York, NY',
-  },
-  {
-    id: '2',
-    name: 'Garden Terrace',
-    restaurantId: '2',
-    restaurantName: 'Sakura Japanese',
-    description: 'A beautiful outdoor space surrounded by lush gardens, perfect for intimate gatherings.',
-    capacity: 80,
-    pricePerHour: 250,
-    minHours: 3,
-    availability: 'Available',
-    amenities: ['Tables & Chairs', 'Outdoor Heaters', 'String Lights', 'Tent Option'],
-    images: [
-      'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=2370&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1507504031003-b417219a0fde?q=80&w=2370&auto=format&fit=crop',
-    ],
-    address: '456 Elm St, New York, NY',
-  },
-  {
-    id: '3',
-    name: 'VIP Lounge',
-    restaurantId: '3',
-    restaurantName: 'The Steakhouse',
-    description: 'An exclusive lounge with premium amenities for sophisticated events and gatherings.',
-    capacity: 50,
-    pricePerHour: 300,
-    minHours: 2,
-    availability: 'Booked',
-    amenities: ['Premium Bar', 'Private Restrooms', 'DJ Booth', 'Security'],
-    images: [
-      'https://images.unsplash.com/photo-1517659649778-bae24b8c2e26?q=80&w=2369&auto=format&fit=crop',
-    ],
-    address: '789 Oak St, New York, NY',
-  },
-  {
-    id: '4',
-    name: 'Rooftop Venue',
-    restaurantId: '1',
-    restaurantName: 'The Italian Place',
-    description: 'Stunning rooftop venue with panoramic city views, perfect for special celebrations.',
-    capacity: 120,
-    pricePerHour: 400,
-    minHours: 3,
-    availability: 'Available',
-    amenities: ['Full Bar', 'Lounge Seating', 'Dance Floor', 'Catering Kitchen'],
-    images: [
-      'https://images.unsplash.com/photo-1561912774-79769a0a0a7a?q=80&w=2260&auto=format&fit=crop',
-    ],
-    address: '123 Main St, New York, NY',
-  },
-];
-
-// Mock event packages
-const mockEventPackages = [
-  {
-    id: '1',
-    name: 'Basic Event Package',
-    description: 'Standard setup with basic decorations and service.',
-    price: 1200,
-    maxCapacity: 100,
-    amenities: ['Basic Decoration', 'Standard Tables & Chairs', 'Basic Sound System'],
-    restaurantId: '1',
-  },
-  {
-    id: '2',
-    name: 'Premium Celebration',
-    description: 'Enhanced decorations, premium food options, and dedicated staff.',
-    price: 2500,
-    maxCapacity: 150,
-    amenities: ['Premium Decorations', 'Upgraded Tables & Chairs', 'Advanced Sound System', 'Lighting Setup', 'Dedicated Staff'],
-    restaurantId: '1',
-  },
-  {
-    id: '3',
-    name: 'Deluxe Wedding Package',
-    description: 'Our complete wedding package with everything you need for the perfect day.',
-    price: 5000,
-    maxCapacity: 200,
-    amenities: ['Elegant Decorations', 'Premium Tables & Settings', 'Professional Sound System', 'Advanced Lighting', 'Dedicated Wedding Coordinator', 'Welcome Drinks', 'Custom Menu Options'],
-    restaurantId: '1',
-  }
-];
-
-// Mock time slots
+// Mock time slots - we'll keep this until we implement dynamic time slots from the backend
 const mockTimeSlots = [
   '10:00 AM', '11:00 AM', '12:00 PM', 
   '1:00 PM', '2:00 PM', '3:00 PM', 
@@ -233,17 +134,30 @@ const EventBookingPage = () => {
 
   const steps = ['Date & Time', 'Package Selection', 'Personal Details'];
 
-  const { data: eventSpace = mockEventSpaces[0] } = useQuery({
+  // Fetch event space data
+  const { data: eventSpace, isLoading: isLoadingEventSpace } = useQuery({
     queryKey: ['eventSpace', id],
     queryFn: async () => {
-      return mockEventSpaces.find(space => space.id === id) || mockEventSpaces[0];
+      const response = await axios.get(`/api/event-reservations/${id}`);
+      return response.data;
+    },
+    onError: (error) => {
+      console.error('Error fetching event space:', error);
+      toast.error('Failed to load event space details');
     }
   });
 
-  const { data: eventPackages = mockEventPackages } = useQuery({
-    queryKey: ['eventPackages', eventSpace.restaurantId],
+  // Fetch event packages
+  const { data: eventPackages = [], isLoading: isLoadingPackages } = useQuery({
+    queryKey: ['eventPackages', eventSpace?.restaurantId],
     queryFn: async () => {
-      return mockEventPackages;
+      const response = await axios.get(`/api/event-packages/${eventSpace?.restaurantId}`);
+      return response.data;
+    },
+    enabled: !!eventSpace?.restaurantId,
+    onError: (error) => {
+      console.error('Error fetching event packages:', error);
+      toast.error('Failed to load event packages');
     }
   });
 
@@ -251,34 +165,52 @@ const EventBookingPage = () => {
 
   const isDateAvailable = async (date) => {
     try {
-      const startDateTime = new Date(date.setHours(9, 0, 0, 0));
-      const endDateTime = new Date(date.setHours(21, 0, 0, 0));
-      const { available } = await checkEventSpaceAvailability(
-        eventSpace.id,
-        startDateTime,
-        endDateTime
-      );
-      return available;
+      const startDateTime = new Date(date);
+      startDateTime.setHours(9, 0, 0, 0);
+      const endDateTime = new Date(date);
+      endDateTime.setHours(21, 0, 0, 0);
+      
+      const response = await axios.get('/api/event-bookings/check-availability', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        params: {
+          eventSpaceId: id,
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString()
+        }
+      });
+      
+      return response.data.isAvailable;
     } catch (error) {
       console.error('Error checking date availability:', error);
-      return true;
+      toast.error('Failed to check date availability');
+      return false;
     }
   };
 
   const checkTimeSlotAvailability = useCallback(async (date) => {
-    if (!date) return;
+    if (!date || !eventSpace) return;
     setIsCheckingAvailability(true);
+    
     try {
       const availableSlots = [];
       for (let i = 0; i < mockTimeSlots.length - 1; i++) {
         const startTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i]}`);
         const endTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i + eventSpace.minHours]}`);
-        const { available } = await checkEventSpaceAvailability(
-          eventSpace.id,
-          startTime,
-          endTime
-        );
-        if (available) {
+        
+        const response = await axios.get('/api/event-bookings/check-availability', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+          },
+          params: {
+            eventSpaceId: id,
+            startDateTime: startTime.toISOString(),
+            endDateTime: endTime.toISOString()
+          }
+        });
+
+        if (response.data.isAvailable) {
           availableSlots.push(mockTimeSlots[i]);
         }
       }
@@ -289,7 +221,7 @@ const EventBookingPage = () => {
     } finally {
       setIsCheckingAvailability(false);
     }
-  }, [eventSpace.id, eventSpace.minHours]);
+  }, [id, eventSpace?.minHours]);
 
   const handleDateSelect = async (date) => {
     setSelectedDate(date);
@@ -308,20 +240,9 @@ const EventBookingPage = () => {
     setCurrentStep(2);
   };
 
-  const handleContinueToDetails = () => {
+  const handleContinueToDetails = async () => { // Marking the function as async
+    const errors = []; // Ensure errors array is defined
     if (!selectedPackageId) {
-      toast.error('Please select an event package');
-      return;
-    }
-    setCurrentStep(3);
-  };
-
-  const handleBookEvent = async () => {
-    try {
-      // Validate all required fields
-      const errors = [];
-      if (!customerName.trim()) errors.push('Name is required');
-      if (!customerEmail.trim()) errors.push('Email is required');
       if (!customerPhone.trim()) errors.push('Phone number is required');
       if (!selectedDate) errors.push('Date is required');
       if (!selectedStartTime) errors.push('Start time is required');
@@ -347,26 +268,90 @@ const EventBookingPage = () => {
         return;
       }
 
-      // Check availability
-      const isAvailable = await checkEventSpaceAvailability(
-        eventSpace.id,
-        new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`),
-        new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`)
-      );
+      try {
+        // Check availability
+        const isAvailable = await checkEventSpaceAvailability(
+          eventSpace.id,
+          new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`),
+          new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`)
+        );
 
-      if (!isAvailable.available) {
-        toast.error('This time slot is no longer available. Please select a different time.');
-        return;
+        if (!isAvailable.available) {
+          toast.error('This time slot is no longer available. Please select a different time.');
+          return;
+        }
+
+        // Create booking
+        const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
+        const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
+        const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
+        const totalPrice = (selectedPackage.price || 0) + (hours * eventSpace.pricePerHour);
+
+        const bookingData = {
+          eventSpaceId: eventSpace.id,
+          startDateTime: startTime,
+          endDateTime: endTime,
+          numberOfGuests: partySize,
+          eventPackageId: selectedPackageId,
+          totalPrice,
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          customerPhone: customerPhone.trim(),
+          specialRequests: specialRequests.trim(),
+          restaurantId: eventSpace.restaurantId
+        };
+
+        const booking = await createEventBooking(bookingData);
+        setBookingRef(booking.id);
+
+        toast.success('Your event has been booked successfully!');
+        setBookingComplete(true);
+      } catch (error) {
+        console.error('Booking error:', error);
+        toast.error(error.response?.data?.error || 'Failed to create booking. Please try again.');
       }
+    }
+  };
 
-      // Create booking
+  const handleContactRestaurant = () => {
+    toast.success('Message sent to restaurant. They will contact you shortly.');
+  };
+
+  // Define the checkEventSpaceAvailability function
+  const checkEventSpaceAvailability = async (eventSpaceId, startDateTime, endDateTime) => {
+    try {
+      const response = await axios.get('/api/event-bookings/check-availability', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        params: {
+          eventSpaceId,
+          startDateTime: startDateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error checking event space availability:', error);
+      throw new Error('Failed to check event space availability');
+    }
+  };
+
+  // Define the handleBookEvent function
+  const handleBookEvent = async () => {
+    if (!selectedPackageId || !selectedDate || !selectedStartTime || !selectedEndTime) {
+      toast.error('Please complete all required fields before booking.');
+      return;
+    }
+
+    try {
       const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
       const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
       const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
-      const totalPrice = (selectedPackage.price || 0) + (hours * eventSpace.pricePerHour);
+      const totalPrice = (selectedPackage?.price || 0) + (hours * eventSpace?.pricePerHour);
 
       const bookingData = {
-        eventSpaceId: eventSpace.id,
+        eventSpaceId: eventSpace?.id,
         startDateTime: startTime,
         endDateTime: endTime,
         numberOfGuests: partySize,
@@ -376,22 +361,17 @@ const EventBookingPage = () => {
         customerEmail: customerEmail.trim(),
         customerPhone: customerPhone.trim(),
         specialRequests: specialRequests.trim(),
-        restaurantId: eventSpace.restaurantId
+        restaurantId: eventSpace?.restaurantId,
       };
 
       const booking = await createEventBooking(bookingData);
       setBookingRef(booking.id);
-      
       toast.success('Your event has been booked successfully!');
       setBookingComplete(true);
     } catch (error) {
-      console.error('Booking error:', error);
-      toast.error(error.response?.data?.error || 'Failed to create booking. Please try again.');
+      console.error('Error creating booking:', error);
+      toast.error('Failed to create booking. Please try again.');
     }
-  };
-
-  const handleContactRestaurant = () => {
-    toast.success('Message sent to restaurant. They will contact you shortly.');
   };
 
   if (bookingComplete) {
@@ -433,13 +413,15 @@ const EventBookingPage = () => {
           >
             Back to Event Spaces
           </Button>
-          <Typography variant="h1">{eventSpace.name}</Typography>
+          <Typography variant="h1">{eventSpace?.name}</Typography>
           <Typography className="subtitle">
-            <LocationOn /> {eventSpace.restaurantName} - {eventSpace.address}
+            <LocationOn /> {eventSpace?.restaurantName} - {eventSpace?.address}
           </Typography>
         </PageHeader>
 
-        <EventSpaceDetails eventSpace={eventSpace} />
+        <ErrorBoundary>
+          <EventSpaceDetails eventSpace={eventSpace} />
+        </ErrorBoundary>
 
         <StyledPaper>
           <Box sx={{ width: '100%' }}>
@@ -517,7 +499,7 @@ const EventBookingPage = () => {
                               const startIndex = mockTimeSlots.indexOf(selectedStartTime);
                               const timeIndex = mockTimeSlots.indexOf(time);
                               return timeIndex > startIndex && 
-                                    timeIndex - startIndex >= eventSpace.minHours;
+                                    timeIndex - startIndex >= eventSpace?.minHours;
                             })
                             .map(time => (
                               <MenuItem key={time} value={time}>{time}</MenuItem>
@@ -536,9 +518,9 @@ const EventBookingPage = () => {
                       value={partySize}
                       onChange={(e) => setPartySize(Number(e.target.value))}
                       InputProps={{
-                        inputProps: { min: 1, max: eventSpace.capacity }
+                        inputProps: { min: 1, max: eventSpace?.capacity }
                       }}
-                      helperText={`Maximum capacity: ${eventSpace.capacity}`}
+                      helperText={`Maximum capacity: ${eventSpace?.capacity}`}
                     />
                   </Grid>
                 </Grid>
@@ -721,7 +703,7 @@ const EventBookingPage = () => {
               variant="outlined"
               fullWidth
               startIcon={<Message />}
-              onClick={() => navigate(`/events/message/${eventSpace.id}`)}
+              onClick={() => navigate(`/events/message/${eventSpace?.id}`)}
               sx={{ mt: 1 }}
             >
               Message Restaurant Directly
