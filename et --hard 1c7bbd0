@@ -1,0 +1,74 @@
+[33m395f82a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mSprint1[m[33m)[m Revert "feat : Ui upgrade"
+[33m1c7bbd0[m feat : Ui upgrade
+[33mafbafd3[m[33m ([m[1;31morigin/Sprint1[m[33m)[m feat: menu view option
+[33mbab9d7a[m feat : add view menu
+[33m2ab1896[m feat: add restaurant id to menu in both post and get methods
+[33m31bde8a[m feat : backend of event booking client end
+[33m72ce022[m feat : event booking on toggle
+[33m206816a[m refactor: improved ui
+[33m704830d[m refactor: Ui enhancement
+[33m1bfb268[m .
+[33m832898c[m .
+[33me54899c[m feat : edit profile backend implementation
+[33mbef512d[m feat: restaurant dashboard and profile edit integration.
+[33m7a293cc[m refactor: Handle Theme globally.
+[33mc0a9041[m refactor: removed redundant files.
+[33m5b66f18[m refactor: accomodating events, restaurants in the project based on previous code
+[33md284e92[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mSprint4[m[33m, [m[1;32mSprint3[m[33m)[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/tem
+[33me85d6e2[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/context/tem
+[33m129231d[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/temp
+[33m6382d1d[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/ui/temp
+[33m9465823[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/layout/temm
+[33mb93d3f7[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/dashboard/tem
+[33m9ee5daa[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/customer/tem
+[33ma4d141a[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/temp
+[33m2ba916c[m Add files via upload
+[33mff9dcd6[m Add files via upload
+[33me64001f[m Add files via upload
+[33m7771a25[m Add files via upload
+[33m41c3483[m Add files via upload
+[33m3552791[m Add files via upload
+[33m03fb3c2[m Create tem
+[33ma857444[m Add files via upload
+[33m5b92151[m Add files via upload
+[33m4a85573[m Add files via upload
+[33mf9f53ae[m Add files via upload
+[33m4dc2dec[m Add files via upload
+[33m80f48e4[m Add files via upload
+[33mb793ed0[m Add files via upload
+[33m992fe67[m Add files via upload
+[33m7254854[m Add files via upload
+[33mba55c58[m Create temp
+[33m984be2d[m Add files via upload
+[33m514eb9b[m Create temm
+[33mfbf5def[m Add files via upload
+[33ma4bd129[m Create tem
+[33mca87803[m Add files via upload
+[33me9d8228[m Create tem
+[33m35eab94[m Create temp
+[33m54495b1[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/components/customer
+[33m181db9e[m Create tem
+[33md5c49d0[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/dashboard directory
+[33m0c17655[m Delete aharconnect/client/src/Sprints/Sprint-1/Sprint4/src/customer directory
+[33m136cfe5[m Add files via upload
+[33m19c30d4[m Create customer
+[33mde04dc4[m Create temp
+[33mb43dee5[m js 2 jsx
+[33m025a008[m Menu CRUD
+[33md282618[m Multi user login
+[33m811ca33[m -
+[33m64ed898[m login debug, expense debug
+[33m0073d3b[m Login debug and expense_entry
+[33m1f286db[m .
+[33madce5a5[m login, signup backend
+[33md9963a5[m Navbar
+[33m4373c73[m low
+[33mfab8727[m signup frontend
+[33m9268609[m SignIn Frontend
+[33m0c6d117[m Starting Signing Signup Logo
+[33m056251c[m material ui packages
+[33me214a7c[m Update Inst.md
+[33mcdebe73[m Basic React app
+[33m5d9436a[m Create Inst.md
+[33m964965b[m Proposal pdf
+[33m08212c1[m Initial commit
