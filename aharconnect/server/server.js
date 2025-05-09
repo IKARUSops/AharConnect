@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const Restaurant = require('./models/restaurantModel');
 const authMiddleware = require('./middleware/authMiddleware');
+const restaurantService = require('./services/mongoRestaurantService');
 
 dotenv.config();
 
@@ -15,12 +16,9 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
 const eventReservationRoutes = require('./routes/eventReservationRoutes');
+const eventBookingRoutes = require('./routes/eventBookingRoutes');
 
 const app = express();
-
-
-app.use('/api/event-reservations', eventReservationRoutes);
-
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +30,8 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/reservations', reservationRoutes);
+app.use('/api/event-reservations', eventReservationRoutes);
+app.use('/api/event-bookings', eventBookingRoutes);
 
 // Restaurant profile routes
 app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {
@@ -164,10 +164,16 @@ app.post('/api/menu', upload.single('image'), (req, res) => {
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => {
+}).then(async () => {
     console.log('MongoDB connected');
-  app.listen(process.env.PORT, () => {
-    console.log(`Server running at http://localhost:${process.env.PORT}`);
+    // Seed initial restaurant data
+    try {
+      await restaurantService.seedInitialData();
+    } catch (err) {
+      console.error('Error seeding data:', err);
+    }
+    app.listen(process.env.PORT, () => {
+      console.log(`Server running at http://localhost:${process.env.PORT}`);
     });
 }).catch(err => console.error('MongoDB connection error:', err));
 

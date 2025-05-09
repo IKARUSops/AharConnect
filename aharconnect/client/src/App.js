@@ -18,6 +18,7 @@ import CheckoutPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/CheckoutPage"
 import EventSpacesPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventSpacesPage";
 import EventBookingPage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventBookingPage";
 import EventMessagePage from "./Sprints/Sprint-1/Faiyaz/pages/customer/EventMessagePage";
+import BookEventSpacePage from "./pages/customer/BookEventSpacePage";
 import RestaurantDashboard from "./Sprints/Sprint-2/RestaurantDashboard/RestaurantDashboard";
 import { CartProvider } from "./Sprints/Sprint-1/Faiyaz/context/CartContext";
 

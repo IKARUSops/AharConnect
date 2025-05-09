@@ -1,43 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { format, addDays } from 'date-fns';
-import { Users, Clock, Calendar, MessageCircle } from 'lucide-react';
-import { Calendar as CalendarComponent } from '../../components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
-import Button from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import Input from '../../components/ui/input';
-import Textarea from '../../components/ui/textarea';
-import Label from '../../components/ui/label';
-import Separator from '../../components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
+import { format } from 'date-fns';
+import 'bootstrap/dist/css/bootstrap.min.css';
+// Material UI imports
+import {
+  Button,
+  TextField,
+  Container,
+  Paper,
+  Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  Grid,
+  Card,
+  CardContent,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Chip,
+  Divider,
+  Box,
+  useTheme,
+  alpha
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import {
+  ArrowBack,
+  Person,
+  Event,
+  Schedule,
+  Message,
+  Check,
+  LocationOn,
+  AccessTime
+} from '@mui/icons-material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
-import { EventPackage } from '../../lib/types';
-import { EventPackageCard } from '../../components/customer/EventPackageCard';
 import { EventBookingConfirmation } from '../../components/customer/EventBookingConfirmation';
 import { EventSpaceDetails } from '../../components/customer/EventSpaceDetails';
+import { createEventBooking, checkEventSpaceAvailability } from '../../../../../api/eventBookings';
 
 // Mock event spaces data (copied from EventSpacesPage)
 const mockEventSpaces = [
   {
-  id: '1',
-  name: 'Grand Hall',
-  restaurantId: '1',
-  restaurantName: 'The Italian Place',
-  description: 'A spacious hall perfect for large gatherings, weddings, and corporate events.',
-  capacity: 200,
-  pricePerHour: 350,
-  minHours: 4,
-  availability: 'Available',
-  amenities: ['Tables & Chairs', 'Sound System', 'Projector', 'Wi-Fi', 'Air Conditioning'],
-  images: [
-    'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=2370&auto=format&fit=crop',
-  ],
-  address: '123 Main St, New York, NY',
+    id: '1',
+    name: 'Grand Hall',
+    restaurantId: '1',
+    restaurantName: 'The Italian Place',
+    description: 'A spacious hall perfect for large gatherings, weddings, and corporate events.',
+    capacity: 200,
+    pricePerHour: 350,
+    minHours: 4,
+    availability: 'Available',
+    amenities: ['Tables & Chairs', 'Sound System', 'Projector', 'Wi-Fi', 'Air Conditioning'],
+    images: [
+      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2370&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=2370&auto=format&fit=crop',
+    ],
+    address: '123 Main St, New York, NY',
   },
   {
     id: '2',
@@ -129,6 +154,65 @@ const mockTimeSlots = [
   '7:00 PM', '8:00 PM'
 ];
 
+// Styled Components
+const StyledContainer = styled(Container)(({ theme }) => ({
+  paddingTop: theme.spacing(4),
+  paddingBottom: theme.spacing(8),
+}));
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  marginTop: theme.spacing(4),
+  marginBottom: theme.spacing(4),
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+  background: theme.palette.background.paper,
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    background: theme.palette.primary.main
+  }
+}));
+
+const StyledCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  position: 'relative',
+  border: `1px solid ${theme.palette.divider}`,
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: theme.shadows[4],
+    borderColor: theme.palette.primary.main,
+  }
+}));
+
+const PageHeader = styled('div')(({ theme }) => ({
+  marginBottom: theme.spacing(6),
+  '& h1': {
+    fontSize: '2.5rem',
+    fontWeight: 700,
+    marginBottom: theme.spacing(1),
+    color: theme.palette.text.primary,
+    [theme.breakpoints.down('sm')]: {
+      fontSize: '2rem',
+    },
+  },
+  '& .subtitle': {
+    fontSize: '1.125rem',
+    color: theme.palette.text.secondary,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+  },
+}));
+
 const EventBookingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -144,36 +228,76 @@ const EventBookingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
-  // Fetch event space details
+  const steps = ['Date & Time', 'Package Selection', 'Personal Details'];
+
   const { data: eventSpace = mockEventSpaces[0] } = useQuery({
     queryKey: ['eventSpace', id],
     queryFn: async () => {
-      // Find the event space by id
       return mockEventSpaces.find(space => space.id === id) || mockEventSpaces[0];
     }
   });
 
-  // Fetch event packages
   const { data: eventPackages = mockEventPackages } = useQuery({
     queryKey: ['eventPackages', eventSpace.restaurantId],
     queryFn: async () => {
-      // In a real app, this would be an API call
       return mockEventPackages;
     }
   });
 
   const selectedPackage = eventPackages.find(pkg => pkg.id === selectedPackageId);
-  
-  const isDateAvailable = (date) => {
-    // Mock availability logic - in a real app this would check against bookings database
-    // For demo purposes, let's make some dates unavailable
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const dateString = format(date, 'yyyy-MM-dd');
-    
-    const unavailableDates = ['2025-05-01', '2025-05-15', '2025-05-20'];
-    return !unavailableDates.includes(dateString) && !isWeekend;
+
+  const isDateAvailable = async (date) => {
+    try {
+      const startDateTime = new Date(date.setHours(9, 0, 0, 0));
+      const endDateTime = new Date(date.setHours(21, 0, 0, 0));
+      const { available } = await checkEventSpaceAvailability(
+        eventSpace.id,
+        startDateTime,
+        endDateTime
+      );
+      return available;
+    } catch (error) {
+      console.error('Error checking date availability:', error);
+      return true;
+    }
+  };
+
+  const checkTimeSlotAvailability = useCallback(async (date) => {
+    if (!date) return;
+    setIsCheckingAvailability(true);
+    try {
+      const availableSlots = [];
+      for (let i = 0; i < mockTimeSlots.length - 1; i++) {
+        const startTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i]}`);
+        const endTime = new Date(`${format(date, 'yyyy-MM-dd')} ${mockTimeSlots[i + eventSpace.minHours]}`);
+        const { available } = await checkEventSpaceAvailability(
+          eventSpace.id,
+          startTime,
+          endTime
+        );
+        if (available) {
+          availableSlots.push(mockTimeSlots[i]);
+        }
+      }
+      setAvailableTimeSlots(availableSlots);
+    } catch (error) {
+      console.error('Error checking time slot availability:', error);
+      toast.error('Failed to check time slot availability');
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  }, [eventSpace.id, eventSpace.minHours]);
+
+  const handleDateSelect = async (date) => {
+    setSelectedDate(date);
+    setSelectedStartTime('');
+    setSelectedEndTime('');
+    if (date) {
+      await checkTimeSlotAvailability(date);
+    }
   };
 
   const handleContinueToPackages = () => {
@@ -181,7 +305,6 @@ const EventBookingPage = () => {
       toast.error('Please select a date and time for your event');
       return;
     }
-    
     setCurrentStep(2);
   };
 
@@ -190,40 +313,91 @@ const EventBookingPage = () => {
       toast.error('Please select an event package');
       return;
     }
-    
     setCurrentStep(3);
   };
 
-  const handleBookEvent = () => {
-    // Validation
-    if (!customerName || !customerEmail || !customerPhone) {
-      toast.error('Please fill in all required fields');
-      return;
+  const handleBookEvent = async () => {
+    try {
+      // Validate all required fields
+      const errors = [];
+      if (!customerName.trim()) errors.push('Name is required');
+      if (!customerEmail.trim()) errors.push('Email is required');
+      if (!customerPhone.trim()) errors.push('Phone number is required');
+      if (!selectedDate) errors.push('Date is required');
+      if (!selectedStartTime) errors.push('Start time is required');
+      if (!selectedEndTime) errors.push('End time is required');
+      if (!selectedPackageId) errors.push('Please select a package');
+
+      if (errors.length > 0) {
+        errors.forEach(error => toast.error(error));
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerEmail)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+
+      // Phone validation
+      const phoneRegex = /^\+?[\d\s-]{10,}$/;
+      if (!phoneRegex.test(customerPhone)) {
+        toast.error('Please enter a valid phone number');
+        return;
+      }
+
+      // Check availability
+      const isAvailable = await checkEventSpaceAvailability(
+        eventSpace.id,
+        new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`),
+        new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`)
+      );
+
+      if (!isAvailable.available) {
+        toast.error('This time slot is no longer available. Please select a different time.');
+        return;
+      }
+
+      // Create booking
+      const startTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`);
+      const endTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`);
+      const hours = Math.ceil((endTime - startTime) / (1000 * 60 * 60));
+      const totalPrice = (selectedPackage.price || 0) + (hours * eventSpace.pricePerHour);
+
+      const bookingData = {
+        eventSpaceId: eventSpace.id,
+        startDateTime: startTime,
+        endDateTime: endTime,
+        numberOfGuests: partySize,
+        eventPackageId: selectedPackageId,
+        totalPrice,
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+        specialRequests: specialRequests.trim(),
+        restaurantId: eventSpace.restaurantId
+      };
+
+      const booking = await createEventBooking(bookingData);
+      setBookingRef(booking.id);
+      
+      toast.success('Your event has been booked successfully!');
+      setBookingComplete(true);
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error(error.response?.data?.error || 'Failed to create booking. Please try again.');
     }
-    
-    // In a real app, this would make an API call to create the booking
-    // For demo purposes, we'll just show success and "send" a confirmation
-    
-    // Generate a booking reference
-    const bookingId = Math.random().toString(36).substring(2, 10).toUpperCase();
-    setBookingRef(bookingId);
-    
-    // Show success message and update state
-    toast.success('Your event has been booked successfully!');
-    setBookingComplete(true);
-    
-    // In a real app, this would trigger an email/SMS to the customer
   };
 
   const handleContactRestaurant = () => {
     toast.success('Message sent to restaurant. They will contact you shortly.');
   };
 
-  // If booking is complete, show confirmation
   if (bookingComplete) {
     return (
       <Layout>
-        <div className="ahar-container py-12">
+        <StyledContainer maxWidth="lg">
           <EventBookingConfirmation 
             bookingRef={bookingRef}
             eventSpace={eventSpace}
@@ -238,299 +412,323 @@ const EventBookingPage = () => {
             partySize={partySize}
             onContactRestaurant={handleContactRestaurant}
           />
-        </div>
+        </StyledContainer>
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="ahar-container py-12">
-        <Button 
-          variant="outline" 
-          className="mb-6"
-          onClick={() => navigate(-1)}
-        >
-          ← Back to Event Spaces
-        </Button>
-        
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-3">{eventSpace.name}</h1>
-          <p className="text-gray-600">{eventSpace.restaurantName} - {eventSpace.address}</p>
-        </div>
-        
-        <div className="max-w-2xl mx-auto flex flex-col items-center">
-            <EventSpaceDetails eventSpace={eventSpace} />
-          <div className="mt-8 w-full">
-            <Card>
-              <CardHeader>
-                <CardTitle>Book This Event Space</CardTitle>
-                <div className="flex space-x-2 mt-2">
-                  <Badge variant={currentStep === 1 ? "default" : "outline"}>1. Date & Time</Badge>
-                  <Badge variant={currentStep === 2 ? "default" : "outline"}>2. Package</Badge>
-                  <Badge variant={currentStep === 3 ? "default" : "outline"}>3. Details</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentStep === 1 && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Select a date</Label>
-                      <div className="border rounded-md mt-1 w-full">
-                        <CalendarComponent
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today || !isDateAvailable(date);
-                          }}
-                          initialFocus
-                          className="rounded-md w-full compact-calendar"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="startTime">Start Time</Label>
-                        <Select 
-                          value={selectedStartTime} 
-                          onValueChange={setSelectedStartTime}
-                        >
-                          <SelectTrigger id="startTime">
-                            <SelectValue placeholder="Select time" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {mockTimeSlots.slice(0, -1).map(time => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="endTime">End Time</Label>
-                        <Select 
-                          value={selectedEndTime} 
-                          onValueChange={setSelectedEndTime} 
-                          disabled={!selectedStartTime}
-                        >
-                          <SelectTrigger id="endTime">
-                            <SelectValue placeholder="Select time" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {mockTimeSlots
-                              .filter(time => {
-                                if (!selectedStartTime) return true;
-                                const startIndex = mockTimeSlots.indexOf(selectedStartTime);
-                                const timeIndex = mockTimeSlots.indexOf(time);
-                                return timeIndex > startIndex && 
-                                      timeIndex - startIndex >= eventSpace.minHours;
-                              })
-                              .map(time => (
-                                <SelectItem key={time} value={time}>
-                                  {time}
-                                </SelectItem>
-                              ))
-                            }
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="partySize">Party Size</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          id="partySize"
-                          type="number"
-                          value={partySize}
-                          onChange={(e) => setPartySize(Number(e.target.value))}
-                          min={1}
-                          max={eventSpace.capacity}
-                        />
-                        <span className="text-sm text-gray-600">Max: {eventSpace.capacity}</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      onClick={handleContinueToPackages} 
-                      className="w-full"
-                      disabled={!selectedDate || !selectedStartTime || !selectedEndTime}
-                    >
-                      Continue to Packages
-                    </Button>
-                  </div>
-                )}
-                
-                {currentStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium">Selected Date & Time</p>
-                        <p className="text-sm text-gray-600">
-                          {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
-                          {selectedStartTime && selectedEndTime && `, ${selectedStartTime} - ${selectedEndTime}`}
-                        </p>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setCurrentStep(1)}
+      <StyledContainer maxWidth="lg">
+        <PageHeader>
+          <Button
+            startIcon={<ArrowBack />}
+            variant="outlined"
+            onClick={() => navigate(-1)}
+            sx={{ 
+              '&:hover': {
+                backgroundColor: alpha('#000', 0.04)
+              }
+            }}
+          >
+            Back to Event Spaces
+          </Button>
+          <Typography variant="h1">{eventSpace.name}</Typography>
+          <Typography className="subtitle">
+            <LocationOn /> {eventSpace.restaurantName} - {eventSpace.address}
+          </Typography>
+        </PageHeader>
+
+        <EventSpaceDetails eventSpace={eventSpace} />
+
+        <StyledPaper>
+          <Box sx={{ width: '100%' }}>
+            <Stepper activeStep={currentStep - 1} alternativeLabel>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+
+            <Box sx={{ mt: 4, mb: 2 }}>
+              {/* Step 1: Date & Time */}
+              {currentStep === 1 && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DatePicker
+                        label="Select Date"
+                        value={selectedDate}
+                        onChange={handleDateSelect}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            variant: "outlined",
+                            sx: { mb: 2 }
+                          }
+                        }}
+                        disablePast
+                        shouldDisableDate={(date) => !isDateAvailable(date)}
+                      />
+                    </LocalizationProvider>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Start Time</InputLabel>
+                      <Select
+                        value={selectedStartTime}
+                        onChange={(e) => setSelectedStartTime(e.target.value)}
+                        label="Start Time"
+                        disabled={isCheckingAvailability}
                       >
-                        Edit
-                      </Button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div>
-                      <Label className="text-base">Select an Event Package</Label>
-                      <div className="space-y-4 mt-3">
-                        {eventPackages.map(pkg => (
-                          <div 
-                            key={pkg.id} 
-                            className={`border rounded-md p-4 cursor-pointer transition-all ${
-                              selectedPackageId === pkg.id 
-                                ? 'border-primary ring-2 ring-primary/20' 
-                                : 'hover:border-primary/50'
-                            }`}
-                            onClick={() => setSelectedPackageId(pkg.id)}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{pkg.name}</h3>
-                                <p className="text-sm text-gray-600">{pkg.description}</p>
-                              </div>
-                              <p className="font-bold">${pkg.price.toFixed(2)}</p>
-                            </div>
-                            
-                            <div className="mt-2">
-                              <div className="flex items-center text-sm text-gray-600 mb-1">
-                                <Users size={14} className="mr-1" />
-                                <span>Up to {pkg.maxCapacity} guests</span>
-                              </div>
-                              
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {pkg.amenities.map((amenity, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {amenity}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      onClick={handleContinueToDetails} 
-                      className="w-full"
-                      disabled={!selectedPackageId}
-                    >
-                      Continue to Details
-                    </Button>
-                  </div>
-                )}
-                
-                {currentStep === 3 && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium">Selected Package</p>
-                        <p className="text-sm text-gray-600">
-                          {selectedPackage?.name} - ${selectedPackage?.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setCurrentStep(2)}
+                        {isCheckingAvailability ? (
+                          <MenuItem disabled>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AccessTime fontSize="small" />
+                              Checking availability...
+                            </Box>
+                          </MenuItem>
+                        ) : (
+                          availableTimeSlots.map(time => (
+                            <MenuItem key={time} value={time}>{time}</MenuItem>
+                          ))
+                        )}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>End Time</InputLabel>
+                      <Select
+                        value={selectedEndTime}
+                        onChange={(e) => setSelectedEndTime(e.target.value)}
+                        label="End Time"
+                        disabled={!selectedStartTime}
                       >
-                        Edit
-                      </Button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="customerName">Your Name</Label>
-                        <Input
-                          id="customerName"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          placeholder="Full Name"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="customerEmail">Email</Label>
-                        <Input
-                          id="customerEmail"
-                          type="email"
-                          value={customerEmail}
-                          onChange={(e) => setCustomerEmail(e.target.value)}
-                          placeholder="your@email.com"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="customerPhone">Phone Number</Label>
-                        <Input
-                          id="customerPhone"
-                          value={customerPhone}
-                          onChange={(e) => setCustomerPhone(e.target.value)}
-                          placeholder="(123) 456-7890"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="specialRequests">Special Requests</Label>
-                        <Textarea
-                          id="specialRequests"
-                          value={specialRequests}
-                          onChange={(e) => setSpecialRequests(e.target.value)}
-                          placeholder="Any special requirements or requests for your event..."
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      onClick={handleBookEvent} 
-                      className="w-full"
-                      disabled={!customerName || !customerEmail || !customerPhone}
+                        {!selectedStartTime ? (
+                          <MenuItem disabled>Select start time first</MenuItem>
+                        ) : (
+                          mockTimeSlots
+                            .filter(time => {
+                              if (!selectedStartTime) return false;
+                              const startIndex = mockTimeSlots.indexOf(selectedStartTime);
+                              const timeIndex = mockTimeSlots.indexOf(time);
+                              return timeIndex > startIndex && 
+                                    timeIndex - startIndex >= eventSpace.minHours;
+                            })
+                            .map(time => (
+                              <MenuItem key={time} value={time}>{time}</MenuItem>
+                            ))
+                        )}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Party Size"
+                      variant="outlined"
+                      value={partySize}
+                      onChange={(e) => setPartySize(Number(e.target.value))}
+                      InputProps={{
+                        inputProps: { min: 1, max: eventSpace.capacity }
+                      }}
+                      helperText={`Maximum capacity: ${eventSpace.capacity}`}
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+              {/* Step 2: Package Selection */}
+              {currentStep === 2 && (
+                <Box>
+                  <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+                      Selected Date & Time
+                    </Typography>
+                    <Typography color="text.secondary">
+                      {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
+                      {selectedStartTime && selectedEndTime && `, ${selectedStartTime} - ${selectedEndTime}`}
+                    </Typography>
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<Event />}
+                      onClick={() => setCurrentStep(1)}
+                      sx={{ mt: 1 }}
                     >
-                      Complete Booking
+                      Change Date & Time
                     </Button>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex-col items-start">
-                <div className="text-sm text-gray-600">
-                  <p className="font-medium mb-1">Need to discuss something specific?</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full flex items-center"
-                    onClick={() => navigate(`/events/message/${eventSpace.id}`)}
-                  >
-                    <MessageCircle size={14} className="mr-1" /> Message Restaurant Directly
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
-      </div>
+                  </Box>
+
+                  <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                    Select an Event Package
+                  </Typography>
+
+                  {eventPackages.map(pkg => (
+                    <StyledCard
+                      key={pkg.id}
+                      variant="outlined"
+                      onClick={() => setSelectedPackageId(pkg.id)}
+                      sx={{
+                        border: selectedPackageId === pkg.id ? 2 : 1,
+                        borderColor: selectedPackageId === pkg.id ? 'primary.main' : 'divider'
+                      }}
+                    >
+                      <CardContent sx={{ p: 3 }}>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={8}>
+                            <Typography variant="h6" gutterBottom>
+                              {pkg.name}
+                            </Typography>
+                            <Typography color="text.secondary" paragraph>
+                              {pkg.description}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <Person sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="text.secondary">
+                                Up to {pkg.maxCapacity} guests
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {pkg.amenities.map((amenity, index) => (
+                                <Chip
+                                  key={index}
+                                  label={amenity}
+                                  size="small"
+                                  variant={selectedPackageId === pkg.id ? "filled" : "outlined"}
+                                  color={selectedPackageId === pkg.id ? "primary" : "default"}
+                                />
+                              ))}
+                            </Box>
+                          </Grid>
+                          <Grid item xs={12} sm={4} sx={{ textAlign: 'right' }}>
+                            <Typography variant="h5" color="primary" fontWeight="bold">
+                              ${pkg.price.toFixed(2)}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </StyledCard>
+                  ))}
+                </Box>
+              )}
+
+              {/* Step 3: Personal Details */}
+              {currentStep === 3 && (
+                <Box>
+                  <Box sx={{ mb: 4, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+                      Selected Package
+                    </Typography>
+                    <Typography color="text.secondary">
+                      {selectedPackage?.name} - ${selectedPackage?.price.toFixed(2)}
+                    </Typography>
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<Event />}
+                      onClick={() => setCurrentStep(2)}
+                      sx={{ mt: 1 }}
+                    >
+                      Change Package
+                    </Button>
+                  </Box>
+
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Full Name"
+                        variant="outlined"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        required
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="email"
+                        label="Email"
+                        variant="outlined"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        required
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Phone Number"
+                        variant="outlined"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        required
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        label="Special Requests"
+                        variant="outlined"
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                        placeholder="Any special requirements or requests for your event..."
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 4 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  size="large"
+                  onClick={currentStep === 1 ? handleContinueToPackages : 
+                          currentStep === 2 ? handleContinueToDetails : 
+                          handleBookEvent}
+                  disabled={
+                    (currentStep === 1 && (!selectedDate || !selectedStartTime || !selectedEndTime)) ||
+                    (currentStep === 2 && !selectedPackageId) ||
+                    (currentStep === 3 && (!customerName || !customerEmail || !customerPhone))
+                  }
+                >
+                  {currentStep === 1 ? 'Continue to Packages' :
+                   currentStep === 2 ? 'Continue to Details' :
+                   'Complete Booking'}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 4 }} />
+
+          <Box>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 500 }}>
+              Need to discuss something specific?
+            </Typography>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<Message />}
+              onClick={() => navigate(`/events/message/${eventSpace.id}`)}
+              sx={{ mt: 1 }}
+            >
+              Message Restaurant Directly
+            </Button>
+          </Box>
+        </StyledPaper>
+      </StyledContainer>
     </Layout>
   );
 };
