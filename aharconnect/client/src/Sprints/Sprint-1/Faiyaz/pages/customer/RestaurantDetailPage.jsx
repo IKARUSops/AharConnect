@@ -14,100 +14,74 @@ import Input from '../../components/ui/input';
 import Separator from '../../components/ui/separator';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
-import { MenuItem, Restaurant } from '../../lib/types';
-import { mockRestaurants } from '../../lib/mock-data';
 import { MenuItemCard } from '../../components/customer/MenuItemCard';
 import { CartDrawer } from '../../components/customer/CartDrawer';
+import axios from 'axios';
 
-// Mock menu items - in a real app, these would come from an API
-const mockMenuItems = [
-  {
-    id: '1',
-    name: 'Classic Margherita Pizza',
-    description: 'Fresh tomatoes, mozzarella, basil, and our special sauce',
-    price: 12.99,
-    category: 'mains',
-    available: true,
-    preparationTime: 15,
-    restaurantId: '1',
-    image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=2370&auto=format&fit=crop'
-  },
-  {
-    id: '2',
-    name: 'Garlic Bread',
-    description: 'Freshly baked bread with garlic butter',
-    price: 4.99,
-    category: 'starters',
-    available: true,
-    preparationTime: 10,
-    restaurantId: '1',
-  },
-  {
-    id: '3',
-    name: 'Caesar Salad',
-    description: 'Crisp romaine lettuce with Caesar dressing, croutons, and parmesan',
-    price: 8.99,
-    category: 'starters',
-    available: true,
-    preparationTime: 8,
-    restaurantId: '1',
-  },
-  {
-    id: '4',
-    name: 'Chocolate Lava Cake',
-    description: 'Warm chocolate cake with a molten center, served with vanilla ice cream',
-    price: 7.99,
-    category: 'desserts',
-    available: true,
-    preparationTime: 12,
-    restaurantId: '1',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=2374&auto=format&fit=crop'
-  },
-  {
-    id: '5',
-    name: 'Penne Arrabbiata',
-    description: 'Penne pasta in a spicy tomato sauce with garlic and herbs',
-    price: 10.99,
-    category: 'mains',
-    available: false,
-    preparationTime: 20,
-    restaurantId: '1',
-  },
-];
-
-/**
- * @param {Object} props
- * @param {boolean} [props.disableCustomTheme]
- */
 const RestaurantDetailPage = (props) => {
   const { id } = useParams();
+  console.log("Route parameters:", useParams()); // Log the entire useParams object for debugging
+
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', id],
     queryFn: async () => {
-      // Mock fetch - in a real app, this would be an API call
-      const restaurant = mockRestaurants.find(r => r.id === id);
+      if (!id) {
+        console.error("Restaurant ID is undefined");
+        throw new Error("Restaurant ID is undefined");
+      }
+      const restaurant = await axios.get(`http://localhost:5000/api/restaurants/${id}`);
       if (!restaurant) throw new Error('Restaurant not found');
-      return restaurant;
-    }
+      return restaurant.data;
+    },
+    enabled: !!id, // Only run query if id is defined
   });
 
-  const { data: menuItems = mockMenuItems, isLoading: menuLoading } = useQuery({
+  const { data: menuItems, isLoading: menuLoading } = useQuery({
     queryKey: ['menu', id],
     queryFn: async () => {
-      // Mock fetch - in a real app, this would be an API call
-      return mockMenuItems;
-    }
+      try {
+        const response = await axios.get(`http://localhost:5000/api/inventory/menu/${id}`);
+        console.log("Fetching menu for restaurant ID:", id);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching menu items:', error);
+        return [];
+      }
+    },
+    enabled: !!id, // Only run query if id is defined
   });
 
+  if (!id) {
+    console.warn("Restaurant ID is missing from the route parameters.");
+    return (
+      <AppTheme {...props}>
+        <CssBaseline enableColorScheme />
+        <Stack
+          direction="column"
+          component="main"
+          sx={{
+            justifyContent: 'center',
+            height: '100%',
+            textAlign: 'center',
+          }}
+        >
+          <h1>Restaurant ID is missing. Please check the URL.</h1>
+        </Stack>
+      </AppTheme>
+    );
+  }
+
+  const menuItemsArray = Array.isArray(menuItems) ? menuItems : [];
+  console.log("Menu items fetched:", menuItemsArray);
   const categories = [
     'all',
-    ...Array.from(new Set(menuItems.map(item => item.category)))
+    ...Array.from(new Set(menuItemsArray.map(item => item.category)))
   ];
 
-  const filteredMenuItems = menuItems.filter(item => {
+  const filteredMenuItems = menuItemsArray.filter(item => {
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -164,31 +138,12 @@ const RestaurantDetailPage = (props) => {
         <Stack
           direction="column"
           component="main"
-          sx={[
-            {
-              justifyContent: 'center',
-              height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
-              marginTop: 'max(40px - var(--template-frame-height, 0px), 0px)',
-              minHeight: '100%',
-            },
-            (theme) => ({
-              '&::before': {
-                content: '""',
-                display: 'block',
-                position: 'fixed',
-                zIndex: -1,
-                inset: 0,
-                backgroundImage:
-                  'radial-gradient(ellipse at 50% 50%, hsl(210, 100%, 97%), hsl(0, 0%, 100%))',
-                backgroundRepeat: 'no-repeat',
-                ...theme.applyStyles('dark', {
-                  backgroundImage:
-                    'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
-                  backgroundAttachment: 'fixed',
-                }),
-              },
-            }),
-          ]}
+          sx={{
+            justifyContent: 'center',
+            height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
+            marginTop: 'max(40px - var(--template-frame-height, 0px), 0px)',
+            minHeight: '100%',
+          }}
         >
           <div className="ahar-container py-12">
             <div className="text-center py-12">
@@ -232,9 +187,13 @@ const RestaurantDetailPage = (props) => {
           {/* Restaurant Header Image */}
           <div className="relative h-60 sm:h-80 bg-gray-900">
             <img
-              src={restaurant.image}
+              src={restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop'}
               alt={restaurant.name}
               className="w-full h-full object-cover opacity-70"
+              onError={(e) => {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -252,7 +211,7 @@ const RestaurantDetailPage = (props) => {
                   <div className="text-sm">{restaurant.priceRange}</div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {restaurant.cuisineType.map((cuisine, index) => (
+                  {restaurant.cuisineType?.map((cuisine, index) => (
                     <Badge key={index} variant="outline" className="bg-white/10 text-white border-white/20">
                       {cuisine}
                     </Badge>
@@ -305,11 +264,15 @@ const RestaurantDetailPage = (props) => {
                 </div>
 
                 {/* Menu Items Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {filteredMenuItems.map((item) => (
+                {filteredMenuItems.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {filteredMenuItems.map((item) => (
                       <MenuItemCard key={item.id} menuItem={item} />
                     ))}
                   </div>
+                ) : (
+                  <p className="text-center text-gray-600">No menu items available for this restaurant.</p>
+                )}
               </TabsContent>
 
               <TabsContent value="info" className="space-y-6">

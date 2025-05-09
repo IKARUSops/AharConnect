@@ -3,6 +3,8 @@ import { Card, CardContent, CardMedia, CardActions, Typography, Box, Chip, Ratin
 import { Link } from "react-router-dom";
 
 export function RestaurantCard({ restaurant }) {
+  console.log('Rendering RestaurantCard with:', restaurant);
+
   return (
     <Card 
       sx={{ 
@@ -91,7 +93,7 @@ export function RestaurantCard({ restaurant }) {
       <CardActions sx={{ p: 3, pt: 0, gap: 1 }}>
         <Button
           component={Link}
-          to={`/restaurants/${restaurant.id}`}
+          to={`/restaurants/${restaurant.id || restaurant._id}`}
           variant="outlined"
           fullWidth
           sx={{ 
