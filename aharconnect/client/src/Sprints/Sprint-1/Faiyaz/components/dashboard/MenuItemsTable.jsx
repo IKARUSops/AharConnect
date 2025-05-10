@@ -7,7 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MenuItem, InventoryItem } from '../../lib/types';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -17,25 +16,17 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
 
-interface MenuItemsTableProps {
-  menuItems: MenuItem[];
-  inventoryItems: InventoryItem[];
-  onAddMenuItem: (menuItem: Omit<MenuItem, 'id'>) => void;
-  onUpdateMenuItem: (menuItem: MenuItem) => void;
-  onDeleteMenuItem: (itemId: string) => void;
-}
-
 export default function MenuItemsTable({ 
   menuItems, 
   inventoryItems,
   onAddMenuItem,
   onUpdateMenuItem,
   onDeleteMenuItem
-}: MenuItemsTableProps) {
+}) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
-  const [formData, setFormData] = useState<Omit<MenuItem, 'id'>>({
+  const [selectedMenuItem, setSelectedMenuItem] = useState(null);
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: 0,
@@ -47,7 +38,7 @@ export default function MenuItemsTable({
 
   const categories = ['starters', 'mains', 'desserts', 'drinks', 'sides'];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e) => {
     const { name, value, type } = e.target;
     
     setFormData(prev => ({
@@ -56,14 +47,14 @@ export default function MenuItemsTable({
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
     
     setFormData(prev => ({
@@ -84,7 +75,7 @@ export default function MenuItemsTable({
     });
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = (e) => {
     e.preventDefault();
     onAddMenuItem(formData);
     toast.success('Menu item added');
@@ -92,13 +83,13 @@ export default function MenuItemsTable({
     resetForm();
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = (e) => {
     e.preventDefault();
     if (selectedMenuItem) {
       onUpdateMenuItem({
         ...formData,
         id: selectedMenuItem.id
-      } as MenuItem);
+      });
       toast.success('Menu item updated');
       setIsEditDialogOpen(false);
       setSelectedMenuItem(null);
@@ -106,7 +97,7 @@ export default function MenuItemsTable({
     }
   };
 
-  const openEditDialog = (item: MenuItem) => {
+  const openEditDialog = (item) => {
     setSelectedMenuItem(item);
     setFormData({
       name: item.name,
