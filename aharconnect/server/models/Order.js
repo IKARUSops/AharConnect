@@ -1,5 +1,28 @@
 const mongoose = require('mongoose');
 
+const deliveryAddressSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  phone: {
+    type: String,
+    required: true
+  },
+  address: {
+    type: String,
+    required: true
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  postalCode: {
+    type: String,
+    required: true
+  }
+});
+
 const orderSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -37,14 +60,38 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
     default: 'pending'
   },
-  deliveryAddress: String,
   paymentStatus: {
     type: String,
-    enum: ['pending', 'completed', 'failed'],
+    enum: ['pending', 'paid', 'failed', 'cancelled'],
     default: 'pending'
+  },
+  transactionId: {
+    type: String,
+    unique: true
+  },
+  paymentId: {
+    type: String
+  },
+  deliveryAddress: {
+    type: deliveryAddressSchema,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-module.exports = mongoose.model('Order', orderSchema); 
+// Update the updatedAt timestamp before saving
+orderSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+const Order = mongoose.model('Order', orderSchema);
+
+module.exports = Order; 

@@ -27,6 +27,12 @@ import RestaurantProfile from "./pages/profile/RestaurantProfile";
 import FoodieProfile from "./pages/profile/FoodieProfile";
 import Messages from "./pages/messages/Messages";
 
+// Payment pages
+import PaymentSuccess from "./pages/payment/PaymentSuccess";
+import PaymentFail from "./pages/payment/PaymentFail";
+import PaymentCancel from "./pages/payment/PaymentCancel";
+import MockPayment from "./pages/MockPayment";
+
 // Commented out imports for missing files
 // import Index from "./Sprints/Sprint-1/Faiyaz/pages/Index";
 // import NotFound from "./Sprints/Sprint-1/Faiyaz/pages/NotFound";
@@ -113,6 +119,12 @@ function App() {
 
                 {/* Messages Route */}
                 <Route path="/messages" element={<Messages />} />
+
+                {/* Payment Routes */}
+                <Route path="/mock-payment" element={<MockPayment />} />
+                <Route path="/payment/success" element={<PaymentSuccess />} />
+                <Route path="/payment/fail" element={<PaymentFail />} />
+                <Route path="/payment/cancel" element={<PaymentCancel />} />
               </Routes>
             </Box>
             <Footer />

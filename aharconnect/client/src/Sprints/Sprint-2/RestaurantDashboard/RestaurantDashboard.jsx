@@ -703,7 +703,9 @@ const RestaurantDashboard = () => {
                           <Box>
                             <Typography variant="body2">{order.userId?.name || 'Anonymous'}</Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {order.deliveryAddress || 'No address provided'}
+                              {order.deliveryAddress ? 
+                                `${order.deliveryAddress.address}, ${order.deliveryAddress.city}, ${order.deliveryAddress.postalCode}` : 
+                                'No address provided'}
                             </Typography>
                           </Box>
                         </TableCell>
@@ -759,6 +761,16 @@ const RestaurantDashboard = () => {
                                   </Button>
                                 )}
                                 {order.status === 'preparing' && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="success"
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'ready')}
+                                  >
+                                    Mark Ready
+                                  </Button>
+                                )}
+                                {order.status === 'ready' && (
                                   <Button
                                     size="small"
                                     variant="contained"

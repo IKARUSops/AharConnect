@@ -15,18 +15,19 @@ import Divider from '@mui/material/Divider';
 import { Add as AddIcon, Remove as RemoveIcon, ShoppingCart as CartIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useCart } from '../../context/CartContext';
 
 const RestaurantDetailPage = (props) => {
   const { id } = useParams();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
-  const [cart, setCart] = useState([]);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const navigate = useNavigate();
+  const { addItem } = useCart();
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', id],
@@ -61,6 +62,7 @@ const RestaurantDetailPage = (props) => {
   };
 
   const handleAddToCart = (item) => {
+    console.log('[RestaurantDetailPage] Adding item to cart:', item);
     setSelectedItem(item);
     setQuantity(1);
     setSpecialInstructions('');
@@ -78,28 +80,26 @@ const RestaurantDetailPage = (props) => {
     setQuantity(prev => Math.max(1, prev + delta));
   };
 
-  const handleAddToOrder = async () => {
-    try {
-      const orderData = {
-        items: [{
-          menuItem: selectedItem._id,
-          quantity,
-          specialInstructions
-        }],
-        deliveryAddress: '' // You might want to add this from user profile or input
-      };
+  const handleAddToOrder = () => {
+    if (!selectedItem) return;
 
-      const response = await axios.post('http://localhost:5000/api/orders', orderData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+    console.log('[RestaurantDetailPage] Adding to order:', {
+      item: selectedItem,
+      quantity,
+      specialInstructions
+    });
+
+    // Add the item to cart with the selected quantity
+    for (let i = 0; i < quantity; i++) {
+      addItem({
+        ...selectedItem,
+        specialInstructions: i === 0 ? specialInstructions : '' // Only add instructions to first item
       });
-
-      toast.success('Order placed successfully!');
-      handleCloseOrderDialog();
-      navigate('/profile'); // Redirect to profile to see order history
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
     }
+
+    toast.success('Added to cart!');
+    handleCloseOrderDialog();
+    navigate('/checkout'); // Navigate to checkout page after adding items
   };
 
   if (!id) {
