@@ -43,6 +43,7 @@ import {
   Check as CheckIcon,
   Delete as DeleteIcon,
   Message as MessageIcon,
+  ArrowBack
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { format } from 'date-fns';
@@ -90,6 +91,14 @@ const RestaurantDashboard = () => {
   const [replyText, setReplyText] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [menuMessages, setMenuMessages] = useState([]);
+  const [selectedMenuItem, setSelectedMenuItem] = useState(null);
+  const [menuMessageReplyText, setMenuMessageReplyText] = useState('');
+  const [senderMessages, setSenderMessages] = useState(null);
+  const [selectedSender, setSelectedSender] = useState(null);
+  const [viewMode, setViewMode] = useState('all'); // 'all' or 'sender'
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const navigate = useNavigate();
 
   // Mock data for when no profile exists
@@ -178,11 +187,22 @@ const RestaurantDashboard = () => {
       if (activeTab === 5) { // Messages tab
         fetchConversations();
       }
+      if (activeTab === 1) { // Orders tab
+        fetchOrders();
+      }
     } else if (profileData === null && !loading) {
       console.warn('[RestaurantDashboard] No restaurant profile found');
       toast.error('Please complete your restaurant profile first');
     }
   }, [profileData, activeTab]);
+
+  // Add this new useEffect for fetching orders
+  useEffect(() => {
+    if (profileData?._id && activeTab === 1) {
+      console.log('[RestaurantDashboard] Fetching orders for restaurant:', profileData._id);
+      fetchOrders();
+    }
+  }, [activeTab, profileData?._id]);
 
   const fetchEventBookings = async () => {
     try {
@@ -359,6 +379,146 @@ const RestaurantDashboard = () => {
     }
   };
 
+  const handleMenuMessageSelect = async (menuItemId) => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot select menu message without profile');
+      return;
+    }
+
+    console.log('[RestaurantDashboard] Selecting menu message:', menuItemId);
+    try {
+      setLoadingMessages(true);
+      const conversation = await getConversation(menuItemId, 'menu');
+      
+      if (!conversation || conversation.length === 0) {
+        console.warn('[RestaurantDashboard] No messages found for menu item');
+        toast.warning('No messages found for this menu item');
+        return;
+      }
+
+      setSelectedMenuItem({
+        menuItemId,
+        messages: conversation
+      });
+
+      // Mark messages as read
+      const unreadMessageIds = conversation
+        .filter(msg => !msg.isRead && msg.receiverId === profileData._id)
+        .map(msg => msg._id);
+
+      if (unreadMessageIds.length > 0) {
+        await markMessagesAsRead(unreadMessageIds);
+        await fetchUnreadMessageCount();
+      }
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error selecting menu message:', error);
+      toast.error('Failed to load menu messages');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleMenuMessageReply = async () => {
+    if (!profileData?._id || !selectedMenuItem) {
+      console.warn('[RestaurantDashboard] Cannot send menu message reply');
+      return;
+    }
+
+    try {
+      const messageData = {
+        menuItemId: selectedMenuItem.menuItemId,
+        messageType: 'menu',
+        content: menuMessageReplyText.trim(),
+        receiverId: selectedMenuItem.messages[0].senderId,
+        subject: selectedMenuItem.messages[0].subject
+      };
+
+      await sendMessage(messageData);
+      setMenuMessageReplyText('');
+      toast.success('Reply sent successfully');
+      
+      // Refresh conversation
+      await handleMenuMessageSelect(selectedMenuItem.menuItemId);
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error sending menu message reply:', error);
+      toast.error('Failed to send reply');
+    }
+  };
+
+  // Add this new function to get messages by sender
+  const getMessagesBySender = async (senderId) => {
+    try {
+      const response = await axios.get(`/api/messages/sender/${senderId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching sender messages:', error);
+      throw error;
+    }
+  };
+
+  const handleSenderSelect = async (senderId, senderName) => {
+    try {
+      setLoadingMessages(true);
+      const data = await getMessagesBySender(senderId);
+      setSenderMessages(data);
+      setSelectedSender({ id: senderId, name: senderName });
+      setViewMode('sender');
+    } catch (error) {
+      console.error('Error fetching sender messages:', error);
+      toast.error('Failed to load sender messages');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchOrders = async () => {
+    if (!profileData?._id) {
+      console.warn('[RestaurantDashboard] Cannot fetch orders without profile');
+      return;
+    }
+
+    try {
+      setLoadingOrders(true);
+      console.log('[RestaurantDashboard] Fetching orders for restaurant:', profileData._id);
+      
+      const response = await API.get(`/orders/restaurant/${profileData._id}`);
+      console.log('[RestaurantDashboard] Orders fetched:', response.data);
+      
+      if (!Array.isArray(response.data)) {
+        console.error('[RestaurantDashboard] Invalid orders data:', response.data);
+        toast.error('Received invalid orders data from server');
+        return;
+      }
+      
+      setOrders(response.data);
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error fetching orders:', error);
+      toast.error('Failed to fetch orders');
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Add this function to handle order status updates
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      console.log('[RestaurantDashboard] Updating order status:', {
+        orderId,
+        newStatus
+      });
+
+      await API.patch(`/orders/${orderId}/status`, { status: newStatus });
+      toast.success('Order status updated successfully');
+      await fetchOrders(); // Refresh orders
+    } catch (error) {
+      console.error('[RestaurantDashboard] Error updating order status:', error.response || error);
+      const errorMessage = error.response?.data?.error || 'Failed to update order status';
+      toast.error(errorMessage);
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -513,39 +673,202 @@ const RestaurantDashboard = () => {
         {activeTab === 0 && (
           <StyledPaper>
             <Typography variant="h6" gutterBottom>
-              Recent Orders
+              Orders
             </Typography>
-            {profileData?.recentOrders?.length > 0 ? (
-              <List>
-                {profileData.recentOrders.map((order, index) => (
-                  <ListItem key={index}>
-                    <ListItemText
-                      primary={`Order #${order.id}`}
-                      secondary={`${order.customer} - $${order.amount}`}
-                    />
-                    <Typography
-                      variant="body2"
-                      color={
-                        order.status === 'Delivered'
-                          ? 'success.main'
-                          : order.status === 'Preparing'
-                          ? 'warning.main'
-                          : 'info.main'
-                      }
-                    >
-                      {order.status}
-                    </Typography>
-                  </ListItem>
-                ))}
-              </List>
+            {loadingOrders ? (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography>Loading orders...</Typography>
+              </Box>
+            ) : orders.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order ID</TableCell>
+                      <TableCell>Customer</TableCell>
+                      <TableCell>Items</TableCell>
+                      <TableCell>Total</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order._id}>
+                        <TableCell>
+                          {order._id.substring(0, 8)}...
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">{order.userId?.name || 'Anonymous'}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {order.deliveryAddress || 'No address provided'}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <List dense>
+                            {order.items.map((item, index) => (
+                              <ListItem key={index} disablePadding>
+                                <ListItemText
+                                  primary={`${item.quantity}x ${item.menuItem?.item_name}`}
+                                  secondary={item.specialInstructions}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </TableCell>
+                        <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.status.toUpperCase()}
+                            color={
+                              order.status === 'delivered' ? 'success' :
+                              order.status === 'preparing' ? 'warning' :
+                              order.status === 'cancelled' ? 'error' : 'default'
+                            }
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                              <>
+                                {order.status === 'pending' && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'confirmed')}
+                                  >
+                                    Confirm
+                                  </Button>
+                                )}
+                                {order.status === 'confirmed' && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="warning"
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'preparing')}
+                                  >
+                                    Prepare
+                                  </Button>
+                                )}
+                                {order.status === 'preparing' && (
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="success"
+                                    onClick={() => handleUpdateOrderStatus(order._id, 'delivered')}
+                                  >
+                                    Mark Delivered
+                                  </Button>
+                                )}
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => handleUpdateOrderStatus(order._id, 'cancelled')}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : (
-              <Typography color="text.secondary">
-                No orders yet. They will appear here when you start receiving orders.
-              </Typography>
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <Typography color="text.secondary">
+                  No orders yet. They will appear here when customers place orders.
+                </Typography>
+              </Box>
             )}
           </StyledPaper>
         )}
-        {activeTab === 1 && <MenuDashboard />}
+        {activeTab === 1 && (
+          <StyledPaper>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={8}>
+                <MenuDashboard />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Menu Messages
+                    </Typography>
+                    {selectedMenuItem ? (
+                      <>
+                        <Box sx={{ height: '400px', overflowY: 'auto', mb: 2 }}>
+                          {selectedMenuItem.messages.map((message) => (
+                            <Box
+                              key={message._id}
+                              sx={{
+                                display: 'flex',
+                                flexDirection: message.senderId === profileData._id ? 'row-reverse' : 'row',
+                                mb: 2,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  maxWidth: '70%',
+                                  backgroundColor: message.senderId === profileData._id ? 'primary.main' : 'grey.100',
+                                  color: message.senderId === profileData._id ? 'white' : 'text.primary',
+                                  borderRadius: 2,
+                                  p: 2,
+                                }}
+                              >
+                                <Typography variant="subtitle2">
+                                  {message.senderId === profileData._id ? 'You' : message.senderName}
+                                </Typography>
+                                <Typography>{message.content}</Typography>
+                                <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
+                                  {format(new Date(message.createdAt), 'MMM d, yyyy h:mm a')}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={2}
+                            value={menuMessageReplyText}
+                            onChange={(e) => setMenuMessageReplyText(e.target.value)}
+                            placeholder="Type your reply..."
+                            variant="outlined"
+                            disabled={loadingMessages}
+                          />
+                          <Button
+                            variant="contained"
+                            onClick={handleMenuMessageReply}
+                            disabled={!menuMessageReplyText.trim() || loadingMessages}
+                          >
+                            Send
+                          </Button>
+                        </Box>
+                      </>
+                    ) : (
+                      <Typography color="text.secondary" align="center">
+                        Select a menu item to view messages
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </StyledPaper>
+        )}
         {activeTab === 2 && <ExpenseTrackingDashboard />}
         {activeTab === 3 && (
           <StyledPaper>
@@ -724,9 +1047,24 @@ const RestaurantDashboard = () => {
               </Box>
             ) : (
               <>
-                <Typography variant="h6" gutterBottom>
-                  Message Center {loadingMessages && '(Loading...)'}
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6">
+                    Message Center {loadingMessages && '(Loading...)'}
+                  </Typography>
+                  {viewMode === 'sender' && (
+                    <Button
+                      startIcon={<ArrowBack />}
+                      onClick={() => {
+                        setViewMode('all');
+                        setSenderMessages(null);
+                        setSelectedSender(null);
+                      }}
+                    >
+                      Back to All Messages
+                    </Button>
+                  )}
+                </Box>
+
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={4}>
                     <Card>
@@ -742,23 +1080,34 @@ const RestaurantDashboard = () => {
                           <Box sx={{ textAlign: 'center', py: 2 }}>
                             <Typography color="text.secondary">No conversations yet</Typography>
                           </Box>
-                        ) : (
+                        ) : viewMode === 'all' ? (
                           <List>
                             {messages.map((thread) => (
                               <ListItem
-                                key={thread.eventSpaceId}
+                                key={thread.customerId}
                                 button
-                                selected={selectedConversation?.eventSpaceId === thread.eventSpaceId}
-                                onClick={() => handleConversationSelect(thread.eventSpaceId)}
+                                onClick={() => handleSenderSelect(thread.customerId, thread.customerName)}
                               >
                                 <ListItemText
-                                  primary={thread.eventSpaceName}
+                                  primary={thread.customerName}
                                   secondary={
                                     <>
-                                      {thread.customerName} - {format(new Date(thread.lastMessageDate), 'MMM d, yyyy')}
-                                      {thread.eventSpaceDescription && (
-                                        <Typography variant="caption" display="block" color="text.secondary">
-                                          {thread.eventSpaceDescription}
+                                      <Typography variant="caption" display="block" color="text.secondary">
+                                        {format(new Date(thread.lastMessageDate), 'MMM d, yyyy')}
+                                      </Typography>
+                                      {thread.messages[0]?.content && (
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                          sx={{
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 1,
+                                            WebkitBoxOrient: 'vertical',
+                                          }}
+                                        >
+                                          {thread.messages[0].content}
                                         </Typography>
                                       )}
                                     </>
@@ -774,68 +1123,117 @@ const RestaurantDashboard = () => {
                               </ListItem>
                             ))}
                           </List>
+                        ) : (
+                          <List>
+                            {senderMessages?.conversations.map((conversation) => (
+                              <ListItem
+                                key={conversation.eventSpace?.id || 'direct'}
+                                button
+                                selected={selectedConversation?.eventSpaceId === conversation.eventSpace?.id}
+                                onClick={() => handleConversationSelect(conversation.eventSpace?.id)}
+                              >
+                                <ListItemText
+                                  primary={conversation.eventSpace?.name || 'Direct Message'}
+                                  secondary={
+                                    <>
+                                      <Typography variant="caption" display="block" color="text.secondary">
+                                        {format(new Date(conversation.messages[0].createdAt), 'MMM d, yyyy')}
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 1,
+                                          WebkitBoxOrient: 'vertical',
+                                        }}
+                                      >
+                                        {conversation.messages[0].content}
+                                      </Typography>
+                                    </>
+                                  }
+                                />
+                                {conversation.messages.filter(m => !m.isRead).length > 0 && (
+                                  <Chip
+                                    size="small"
+                                    color="primary"
+                                    label={conversation.messages.filter(m => !m.isRead).length}
+                                  />
+                                )}
+                              </ListItem>
+                            ))}
+                          </List>
                         )}
                       </CardContent>
                     </Card>
                   </Grid>
+
                   <Grid item xs={12} md={8}>
-                    {selectedConversation ? (
+                    {selectedSender ? (
                       <Card>
                         <CardContent>
-                          <Box sx={{ height: '400px', overflowY: 'auto', mb: 2 }}>
-                            {selectedConversation.messages.map((message) => (
-                              <Box
-                                key={message._id}
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: message.senderId === profileData._id ? 'row-reverse' : 'row',
-                                  mb: 2,
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    maxWidth: '70%',
-                                    backgroundColor: message.senderId === profileData._id ? 'primary.main' : 'grey.100',
-                                    color: message.senderId === profileData._id ? 'white' : 'text.primary',
-                                    borderRadius: 2,
-                                    p: 2,
-                                  }}
-                                >
-                                  <Typography variant="subtitle2">
-                                    {message.senderId === profileData._id ? 'You' : message.senderName}
-                                    {message.senderType && (
-                                      <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.8 }}>
-                                        ({message.senderType})
+                          <Typography variant="h6" gutterBottom>
+                            Conversations with {selectedSender.name}
+                          </Typography>
+                          {selectedConversation ? (
+                            <>
+                              <Box sx={{ height: '400px', overflowY: 'auto', mb: 2 }}>
+                                {selectedConversation.messages.map((message) => (
+                                  <Box
+                                    key={message._id}
+                                    sx={{
+                                      display: 'flex',
+                                      flexDirection: message.senderId === profileData._id ? 'row-reverse' : 'row',
+                                      mb: 2,
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        maxWidth: '70%',
+                                        backgroundColor: message.senderId === profileData._id ? 'primary.main' : 'grey.100',
+                                        color: message.senderId === profileData._id ? 'white' : 'text.primary',
+                                        borderRadius: 2,
+                                        p: 2,
+                                      }}
+                                    >
+                                      <Typography variant="subtitle2">
+                                        {message.senderId === profileData._id ? 'You' : message.senderName}
                                       </Typography>
-                                    )}
-                                  </Typography>
-                                  <Typography>{message.content}</Typography>
-                                  <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
-                                    {format(new Date(message.createdAt), 'MMM d, yyyy h:mm a')}
-                                  </Typography>
-                                </Box>
+                                      <Typography>{message.content}</Typography>
+                                      <Typography variant="caption" color="inherit" sx={{ opacity: 0.8 }}>
+                                        {format(new Date(message.createdAt), 'MMM d, yyyy h:mm a')}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                ))}
                               </Box>
-                            ))}
-                          </Box>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <TextField
-                              fullWidth
-                              multiline
-                              rows={2}
-                              value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
-                              placeholder="Type your reply..."
-                              variant="outlined"
-                              disabled={loadingMessages}
-                            />
-                            <Button
-                              variant="contained"
-                              onClick={handleSendReply}
-                              disabled={!replyText.trim() || loadingMessages}
-                            >
-                              Send
-                            </Button>
-                          </Box>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                  fullWidth
+                                  multiline
+                                  rows={2}
+                                  value={replyText}
+                                  onChange={(e) => setReplyText(e.target.value)}
+                                  placeholder="Type your reply..."
+                                  variant="outlined"
+                                  disabled={loadingMessages}
+                                />
+                                <Button
+                                  variant="contained"
+                                  onClick={handleSendReply}
+                                  disabled={!replyText.trim() || loadingMessages}
+                                >
+                                  Send
+                                </Button>
+                              </Box>
+                            </>
+                          ) : (
+                            <Typography color="text.secondary" align="center">
+                              Select a conversation to view messages
+                            </Typography>
+                          )}
                         </CardContent>
                       </Card>
                     ) : (
@@ -843,7 +1241,7 @@ const RestaurantDashboard = () => {
                         <CardContent sx={{ textAlign: 'center', py: 8 }}>
                           <MessageIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                           <Typography variant="h6" color="text.secondary">
-                            Select a conversation to view messages
+                            Select a sender to view their messages
                           </Typography>
                         </CardContent>
                       </Card>

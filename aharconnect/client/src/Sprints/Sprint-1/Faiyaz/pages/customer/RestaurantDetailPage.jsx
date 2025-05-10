@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
 import AppTheme from '../../../../../shared-theme/AppTheme';
 import ColorModeSelect from '../../../../../shared-theme/ColorModeSelect';
-import { Badge } from '@mui/material';
+import { Badge, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import TextField from '@mui/material/TextField';
 import Divider from '@mui/material/Divider';
+import { Add as AddIcon, Remove as RemoveIcon, ShoppingCart as CartIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const RestaurantDetailPage = (props) => {
   const { id } = useParams();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [cart, setCart] = useState([]);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const navigate = useNavigate();
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', id],
@@ -50,6 +58,48 @@ const RestaurantDetailPage = (props) => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleAddToCart = (item) => {
+    setSelectedItem(item);
+    setQuantity(1);
+    setSpecialInstructions('');
+    setOrderDialogOpen(true);
+  };
+
+  const handleCloseOrderDialog = () => {
+    setOrderDialogOpen(false);
+    setSelectedItem(null);
+    setQuantity(1);
+    setSpecialInstructions('');
+  };
+
+  const handleQuantityChange = (delta) => {
+    setQuantity(prev => Math.max(1, prev + delta));
+  };
+
+  const handleAddToOrder = async () => {
+    try {
+      const orderData = {
+        items: [{
+          menuItem: selectedItem._id,
+          quantity,
+          specialInstructions
+        }],
+        deliveryAddress: '' // You might want to add this from user profile or input
+      };
+
+      const response = await axios.post('http://localhost:5000/api/orders', orderData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+
+      toast.success('Order placed successfully!');
+      handleCloseOrderDialog();
+      navigate('/profile'); // Redirect to profile to see order history
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast.error('Failed to place order. Please try again.');
+    }
   };
 
   if (!id) {
@@ -197,6 +247,15 @@ const RestaurantDetailPage = (props) => {
                             <h5>{item.item_name}</h5>
                             <p className="text-muted" style={{ color: 'var(--bs-body-color, #6c757d)' }}>{item.description}</p>
                             <p className="fw-bold">${item.price}</p>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              fullWidth
+                              onClick={() => handleAddToCart(item)}
+                              startIcon={<CartIcon />}
+                            >
+                              Order Now
+                            </Button>
                           </Card>
                         </div>
                       ))}
@@ -204,6 +263,50 @@ const RestaurantDetailPage = (props) => {
                   </Card>
                 )
               ))}
+
+              {/* Order Dialog */}
+              <Dialog open={orderDialogOpen} onClose={handleCloseOrderDialog}>
+                <DialogTitle>Place Order</DialogTitle>
+                <DialogContent>
+                  {selectedItem && (
+                    <>
+                      <div className="mb-3">
+                        <h6>{selectedItem.item_name}</h6>
+                        <p className="text-muted">${selectedItem.price}</p>
+                      </div>
+                      <div className="d-flex align-items-center mb-3">
+                        <IconButton onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
+                          <RemoveIcon />
+                        </IconButton>
+                        <span className="mx-3">{quantity}</span>
+                        <IconButton onClick={() => handleQuantityChange(1)}>
+                          <AddIcon />
+                        </IconButton>
+                      </div>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label="Special Instructions"
+                        value={specialInstructions}
+                        onChange={(e) => setSpecialInstructions(e.target.value)}
+                        placeholder="Any special requests?"
+                        className="mb-3"
+                      />
+                      <div className="d-flex justify-content-between align-items-center">
+                        <span>Total:</span>
+                        <span className="fw-bold">${(selectedItem.price * quantity).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseOrderDialog}>Cancel</Button>
+                  <Button onClick={handleAddToOrder} variant="contained" color="primary">
+                    Place Order
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </div>
           )}
 

@@ -17,6 +17,10 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import API from '../../api/auth';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -39,18 +43,32 @@ const FoodieProfile = () => {
     preferences: []
   });
 
+  // Fetch orders
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const response = await axios.get('/api/orders/user', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      return response.data;
+    }
+  });
+
   useEffect(() => {
     fetchProfile();
   }, []);
 
   const fetchProfile = async () => {
     try {
-      const response = await API.get('/users/profile');
+      const response = await axios.get('http://localhost:5000/api/users/profile', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
       setProfile(response.data);
       setFormData(response.data);
       setError('');
     } catch (err) {
-      setError('Failed to load profile');
+      const errorMessage = err.response?.data?.error || 'Failed to load profile';
+      setError(errorMessage);
       console.error('Error fetching profile:', err);
     } finally {
       setLoading(false);
@@ -68,12 +86,17 @@ const FoodieProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.put('/users/profile', formData);
-      setProfile(formData);
+      const response = await axios.put('http://localhost:5000/api/users/profile', formData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      setProfile(response.data);
       setEditMode(false);
       setError('');
+      toast.success('Profile updated successfully');
     } catch (err) {
-      setError('Failed to update profile');
+      const errorMessage = err.response?.data?.error || 'Failed to update profile';
+      setError(errorMessage);
+      toast.error(errorMessage);
       console.error('Error updating profile:', err);
     }
   };
@@ -159,47 +182,68 @@ const FoodieProfile = () => {
             <Typography variant="h6" gutterBottom>
               Order History
             </Typography>
-            <List>
-              {profile?.orders?.map((order, index) => (
-                <React.Fragment key={order.id}>
+            {ordersLoading ? (
+              <Typography>Loading orders...</Typography>
+            ) : (
+              <List>
+                {orders.map((order, index) => (
+                  <React.Fragment key={order._id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={`Order #${order._id.substring(0, 8)}`}
+                        secondary={
+                          <>
+                            <Typography component="span" variant="body2" color="text.primary">
+                              {order.restaurantId?.name || 'Restaurant'}
+                            </Typography>
+                            {` — ${format(new Date(order.createdAt), 'PPp')}`}
+                            <Box sx={{ mt: 1 }}>
+                              <Chip
+                                label={order.status.toUpperCase()}
+                                color={
+                                  order.status === 'delivered' ? 'success' :
+                                  order.status === 'preparing' ? 'warning' :
+                                  order.status === 'cancelled' ? 'error' : 'default'
+                                }
+                                size="small"
+                                sx={{ mr: 1 }}
+                              />
+                              <Chip
+                                label={`Payment: ${order.paymentStatus.toUpperCase()}`}
+                                color={
+                                  order.paymentStatus === 'completed' ? 'success' :
+                                  order.paymentStatus === 'failed' ? 'error' : 'warning'
+                                }
+                                size="small"
+                              />
+                              <Box sx={{ mt: 1 }}>
+                                {order.items.map((item, itemIndex) => (
+                                  <Typography key={itemIndex} variant="body2" color="text.secondary">
+                                    {item.quantity}x {item.menuItem?.item_name} - ${(item.price * item.quantity).toFixed(2)}
+                                  </Typography>
+                                ))}
+                                <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                                  Total: ${order.totalAmount.toFixed(2)}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                    {index < orders.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+                {orders.length === 0 && (
                   <ListItem>
                     <ListItemText
-                      primary={`Order #${order.id}`}
-                      secondary={
-                        <>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {order.restaurant}
-                          </Typography>
-                          {` — ${order.date}`}
-                          <Box sx={{ mt: 1 }}>
-                            <Chip
-                              label={order.status}
-                              color={
-                                order.status === 'Delivered' ? 'success' :
-                                order.status === 'Processing' ? 'warning' : 'default'
-                              }
-                              size="small"
-                            />
-                            <Typography variant="body2" sx={{ mt: 1 }}>
-                              Total: ${order.total}
-                            </Typography>
-                          </Box>
-                        </>
-                      }
+                      primary="No orders yet"
+                      secondary="Your order history will appear here"
                     />
                   </ListItem>
-                  {index < profile.orders.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-              {(!profile?.orders || profile.orders.length === 0) && (
-                <ListItem>
-                  <ListItemText
-                    primary="No orders yet"
-                    secondary="Your order history will appear here"
-                  />
-                </ListItem>
-              )}
-            </List>
+                )}
+              </List>
+            )}
           </Box>
 
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>

@@ -13,11 +13,14 @@ import {
   Chip,
   Card,
   CardContent,
-  Divider
+  Divider,
+  Alert
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { format } from 'date-fns';
-import { getUnreadMessageCount, getConversation, sendMessage, markMessagesAsRead } from '../../api/messages';
+import { getUnreadMessageCount, getConversation, sendMessage, markMessagesAsRead, getRestaurantConversations, getUserConversations } from '../../api/messages';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -38,16 +41,26 @@ const MessageBubble = styled(Box)(({ theme, isOwn }) => ({
 }));
 
 const Messages = () => {
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedMessages, setSelectedMessages] = useState([]);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [userType, setUserType] = useState(null);
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const storedUserType = localStorage.getItem('userType');
     const storedUserId = localStorage.getItem('userId');
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      setError('Please log in to view messages');
+      return;
+    }
+
     setUserType(storedUserType);
     setUserId(storedUserId);
     fetchConversations();
@@ -56,17 +69,22 @@ const Messages = () => {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      // The endpoint will be different based on user type
-      const endpoint = userType === 'restaurant' ? '/api/messages/restaurant' : '/api/messages/user';
-      const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      const data = await response.json();
+      setError('');
+
+      // Use different endpoints based on user type
+      let data;
+      if (userType === 'restaurant') {
+        data = await getRestaurantConversations();
+      } else {
+        data = await getUserConversations();
+      }
+
+      console.log('Fetched conversations:', data);
       setConversations(data);
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      setError(error.message || 'Failed to load conversations');
+      toast.error('Failed to load conversations');
     } finally {
       setLoading(false);
     }
@@ -74,17 +92,28 @@ const Messages = () => {
 
   const handleConversationSelect = async (conversation) => {
     try {
+      setLoading(true);
+      setError('');
+      console.log('Selecting conversation:', conversation);
+
+      // Fetch messages for this conversation
+      const messages = await getConversation(conversation.eventSpaceId);
+      console.log('Fetched messages:', messages);
+
       setSelectedConversation(conversation);
+      setSelectedMessages(messages);
+
       // Mark messages as read
-      if (conversation.unreadCount > 0) {
-        await markMessagesAsRead(conversation.messages
-          .filter(m => !m.isRead && m.receiverId === userId)
-          .map(m => m._id)
-        );
-        // Update conversations list
+      const unreadMessageIds = messages
+        .filter(m => !m.isRead && m.receiverId === userId)
+        .map(m => m._id);
+
+      if (unreadMessageIds.length > 0) {
+        await markMessagesAsRead(unreadMessageIds);
+        // Update conversations list to reflect read status
         setConversations(prevConversations =>
           prevConversations.map(conv =>
-            conv._id === conversation._id
+            conv.eventSpaceId === conversation.eventSpaceId
               ? { ...conv, unreadCount: 0 }
               : conv
           )
@@ -92,37 +121,54 @@ const Messages = () => {
       }
     } catch (error) {
       console.error('Error selecting conversation:', error);
+      setError('Failed to load messages');
+      toast.error('Failed to load messages');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!replyText.trim() || !selectedConversation) return;
+    if (!replyText.trim() || !selectedConversation) {
+      toast.error('Please enter a message');
+      return;
+    }
 
     try {
       const messageData = {
-        receiverId: selectedConversation.otherPartyId,
+        eventSpaceId: selectedConversation.eventSpaceId,
         content: replyText.trim(),
-        subject: selectedConversation.subject
+        subject: selectedMessages[0]?.subject || 'Re: Event Space Inquiry',
+        receiverId: selectedConversation.customerId
       };
 
+      console.log('Sending message:', messageData);
       await sendMessage(messageData);
       setReplyText('');
+      toast.success('Message sent successfully');
       
       // Refresh conversation
-      const updatedConversation = await getConversation(selectedConversation._id);
-      setSelectedConversation(updatedConversation);
-      
-      // Update conversations list
+      await handleConversationSelect(selectedConversation);
+      // Refresh conversations list
       await fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
+      toast.error('Failed to send message');
     }
   };
 
-  if (loading) {
+  if (error) {
     return (
       <Container maxWidth="lg">
-        <Typography>Loading messages...</Typography>
+        <Alert severity="error" sx={{ mt: 4 }}>{error}</Alert>
+      </Container>
+    );
+  }
+
+  if (loading && conversations.length === 0) {
+    return (
+      <Container maxWidth="lg">
+        <Typography sx={{ mt: 4 }}>Loading messages...</Typography>
       </Container>
     );
   }
@@ -143,20 +189,20 @@ const Messages = () => {
                 </Typography>
                 <List>
                   {conversations.map((conversation) => (
-                    <React.Fragment key={conversation._id}>
+                    <React.Fragment key={conversation.eventSpaceId}>
                       <ListItem
                         button
-                        selected={selectedConversation?._id === conversation._id}
+                        selected={selectedConversation?.eventSpaceId === conversation.eventSpaceId}
                         onClick={() => handleConversationSelect(conversation)}
                       >
                         <ListItemText
-                          primary={conversation.otherPartyName}
+                          primary={conversation.customerName}
                           secondary={
                             <>
                               <Typography variant="caption" display="block">
                                 {format(new Date(conversation.lastMessageDate), 'MMM d, yyyy')}
                               </Typography>
-                              {conversation.lastMessage}
+                              {conversation.messages[0]?.content}
                             </>
                           }
                         />
@@ -192,10 +238,10 @@ const Messages = () => {
                   <>
                     <Box sx={{ mb: 3 }}>
                       <Typography variant="h6">
-                        {selectedConversation.otherPartyName}
+                        {selectedConversation.customerName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {selectedConversation.subject}
+                        {selectedMessages[0]?.subject}
                       </Typography>
                     </Box>
 
@@ -209,13 +255,13 @@ const Messages = () => {
                         p: 2
                       }}
                     >
-                      {selectedConversation.messages.map((message) => (
+                      {selectedMessages.map((message) => (
                         <MessageBubble
                           key={message._id}
                           isOwn={message.senderId === userId}
                         >
                           <Typography variant="subtitle2">
-                            {message.senderId === userId ? 'You' : message.senderName}
+                            {message.senderId === userId ? 'You' : message.senderName || 'Customer'}
                           </Typography>
                           <Typography>{message.content}</Typography>
                           <Typography variant="caption" sx={{ opacity: 0.7 }}>

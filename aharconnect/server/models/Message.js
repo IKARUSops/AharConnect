@@ -13,8 +13,17 @@ const messageSchema = new mongoose.Schema({
   },
   eventSpaceId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'EventSpace',
-    required: true
+    ref: 'EventSpace'
+  },
+  menuItemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MenuItem'
+  },
+  messageType: {
+    type: String,
+    enum: ['event', 'menu'],
+    required: true,
+    default: 'event'
   },
   subject: {
     type: String,
@@ -57,4 +66,6 @@ const messageSchema = new mongoose.Schema({
 messageSchema.index({ senderId: 1, receiverId: 1 });
 messageSchema.index({ eventSpaceId: 1 });
 
-module.exports = mongoose.model('Message', messageSchema); 
+const Message = mongoose.model('Message', messageSchema);
+
+module.exports = Message; 

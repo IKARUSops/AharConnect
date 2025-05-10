@@ -18,6 +18,8 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const eventReservationRoutes = require('./routes/eventReservationRoutes');
 const eventBookingRoutes = require('./routes/eventBookingRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -34,6 +36,8 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/event-reservations', eventReservationRoutes);
 app.use('/api/event-bookings', eventBookingRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
 
 // Restaurant profile routes
 app.get('/api/restaurants/profile', authMiddleware, async (req, res) => {
@@ -171,10 +175,39 @@ mongoose.connect(process.env.MONGO_URI, {
     } catch (err) {
       console.error('Error seeding data:', err);
     }
-    app.listen(process.env.PORT, () => {
-      console.log(`Server running at http://localhost:${process.env.PORT}`);
+
+    // Get port from environment variable or use default
+    const port = process.env.PORT || 5000;
+
+    // Create server with error handling
+    const server = app.listen(port, () => {
+      console.log(`Server running at http://localhost:${port}`);
+    }).on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is already in use. Please try these steps:`);
+        console.error('1. Kill any existing node processes');
+        console.error('2. Change the PORT in your .env file');
+        console.error('3. Restart the server');
+        process.exit(1);
+      } else {
+        console.error('Server error:', err);
+        process.exit(1);
+      }
     });
-}).catch(err => console.error('MongoDB connection error:', err));
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM signal received. Closing server...');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+
+}).catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+});
 
 
 

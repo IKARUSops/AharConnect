@@ -88,4 +88,22 @@ export const getRestaurantConversations = async () => {
   } catch (error) {
     throw error.response?.data?.error || 'Failed to fetch conversations';
   }
+};
+
+export const getUserConversations = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await axios.get('/api/messages/user-conversations', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.error || 'Failed to fetch conversations';
+  }
 }; 
