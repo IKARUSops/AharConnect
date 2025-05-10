@@ -14,6 +14,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  type: {
+    type: String,
+    enum: ['Restaurant', 'Foodie'],
+    required: true
+  },
   phone: {
     type: String
   },
@@ -35,6 +40,8 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('User', userSchema);
