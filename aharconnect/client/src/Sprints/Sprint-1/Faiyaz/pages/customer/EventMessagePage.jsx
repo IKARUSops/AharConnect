@@ -101,7 +101,8 @@ const EventMessagePage = () => {
         receiverId: eventSpace.restaurantId,
         senderName: name.trim(),
         senderEmail: email.trim(),
-        senderPhone: phone.trim()
+        senderPhone: phone.trim(),
+        messageType: 'event'
       };
 
       console.log('Sending message with data:', messageData);

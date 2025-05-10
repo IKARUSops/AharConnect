@@ -99,6 +99,8 @@ const RestaurantDashboard = () => {
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'sender'
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [reservations, setReservations] = useState([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
   const navigate = useNavigate();
 
   // Mock data for when no profile exists
@@ -157,28 +159,33 @@ const RestaurantDashboard = () => {
     setOpenProfileDialog(false);
   };
 
-  const handleReservationToggle = async () => {
+  const fetchReservationSettings = async () => {
     try {
-      const response = await API.post('/reservations/toggle');
+      const response = await API.get('/reservations/settings');
+      console.log('Reservation settings:', response.data);
       setReservationSettings(response.data);
     } catch (error) {
-      console.error('Error toggling reservations:', error);
-      setError('Failed to toggle reservations');
+      console.error('Error fetching reservation settings:', error);
+      toast.error('Failed to load reservation settings');
     }
   };
 
-  useEffect(() => {
-    const fetchReservationSettings = async () => {
-      try {
-        const response = await API.get('/reservations/settings');
+  const handleReservationToggle = async () => {
+    try {
+      const response = await API.post('/reservations/toggle', {
+        isEnabled: !reservationSettings?.isEnabled
+      });
+      
+      if (response.data) {
         setReservationSettings(response.data);
-      } catch (error) {
-        console.error('Error fetching reservation settings:', error);
+        toast.success(`Reservations ${response.data.isEnabled ? 'enabled' : 'disabled'} successfully`);
       }
-    };
-
-    fetchReservationSettings();
-  }, []);
+    } catch (error) {
+      console.error('Error toggling reservations:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to toggle reservations';
+      toast.error(errorMessage);
+    }
+  };
 
   useEffect(() => {
     if (profileData?._id) {
@@ -519,6 +526,33 @@ const RestaurantDashboard = () => {
     }
   };
 
+  // Add this function to fetch reservations
+  const fetchReservations = async () => {
+    if (!profileData?._id) {
+      console.warn('Cannot fetch reservations without restaurant profile');
+      return;
+    }
+
+    try {
+      setLoadingReservations(true);
+      const response = await API.get(`/event-bookings/restaurant/${profileData._id}`);
+      console.log('Fetched reservations:', response.data);
+      setReservations(response.data);
+    } catch (error) {
+      console.error('Error fetching reservations:', error);
+      toast.error('Failed to fetch reservations');
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
+
+  // Add useEffect to fetch reservations when tab changes
+  useEffect(() => {
+    if (activeTab === 3 && profileData?._id) {
+      fetchReservations();
+    }
+  }, [activeTab, profileData?._id]);
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -589,6 +623,9 @@ const RestaurantDashboard = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Advance Booking: {reservationSettings.advanceBookingDays} days
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Event Rate: ${reservationSettings.eventRate}/hour
                 </Typography>
               </>
             )}
@@ -905,18 +942,26 @@ const RestaurantDashboard = () => {
                 color="primary"
                 onClick={async () => {
                   try {
-                    const token = localStorage.getItem('authToken');
-                    await axios.put('/api/reservations/settings', {
-                      eventRate
-                    }, {
-                      headers: {
-                        Authorization: `Bearer ${token}`
-                      }
+                    if (!eventRate || isNaN(eventRate)) {
+                      toast.error('Please enter a valid rate');
+                      return;
+                    }
+
+                    const response = await API.put('/event-bookings/settings', {
+                      eventRate: parseFloat(eventRate),
+                      maxCapacity: reservationSettings?.maxCapacity || 50,
+                      bookingDuration: reservationSettings?.bookingDuration || 120,
+                      advanceBookingDays: reservationSettings?.advanceBookingDays || 7
                     });
-                    toast.success('Event rates updated successfully');
+
+                    if (response.data) {
+                      toast.success('Event rates updated successfully');
+                      setReservationSettings(response.data);
+                    }
                   } catch (error) {
                     console.error('Error updating event rates:', error);
-                    toast.error('Failed to update event rates');
+                    const errorMessage = error.response?.data?.error || 'Failed to update event rates';
+                    toast.error(errorMessage);
                   }
                 }}
               >
@@ -924,6 +969,7 @@ const RestaurantDashboard = () => {
               </Button>
             </Box>
 
+            {/* Update the table to match event booking data structure */}
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
@@ -938,16 +984,16 @@ const RestaurantDashboard = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {loadingBookings ? (
+                  {loadingReservations ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">Loading bookings...</TableCell>
+                      <TableCell colSpan={7} align="center">Loading reservations...</TableCell>
                     </TableRow>
-                  ) : eventBookings.length === 0 ? (
+                  ) : reservations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">No event bookings found</TableCell>
+                      <TableCell colSpan={7} align="center">No reservations found</TableCell>
                     </TableRow>
                   ) : (
-                    eventBookings.map((booking) => (
+                    reservations.map((booking) => (
                       <TableRow key={booking._id}>
                         <TableCell>
                           <Box>
@@ -977,22 +1023,46 @@ const RestaurantDashboard = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          {booking.status === 'pending' && (
-                            <IconButton
-                              color="success"
-                              onClick={() => handleApproveBooking(booking._id)}
-                              title="Approve booking"
-                            >
-                              <CheckIcon />
-                            </IconButton>
-                          )}
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeleteClick(booking)}
-                            title="Delete booking"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            {booking.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  onClick={async () => {
+                                    try {
+                                      await API.put(`/event-bookings/${booking._id}/confirm`);
+                                      toast.success('Booking confirmed');
+                                      fetchReservations(); // Refresh the list
+                                    } catch (error) {
+                                      console.error('Error confirming booking:', error);
+                                      toast.error('Failed to confirm booking');
+                                    }
+                                  }}
+                                >
+                                  Confirm
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={async () => {
+                                    try {
+                                      await API.put(`/event-bookings/${booking._id}/cancel`);
+                                      toast.success('Booking cancelled');
+                                      fetchReservations(); // Refresh the list
+                                    } catch (error) {
+                                      console.error('Error cancelling booking:', error);
+                                      toast.error('Failed to cancel booking');
+                                    }
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1000,33 +1070,6 @@ const RestaurantDashboard = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-              <DialogTitle>Confirm Deletion</DialogTitle>
-              <DialogContent>
-                Are you sure you want to delete this booking?
-                {selectedBooking && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      Customer: {selectedBooking.customerName}
-                    </Typography>
-                    <Typography variant="body2">
-                      Date: {format(new Date(selectedBooking.startDateTime), 'MMM d, yyyy')}
-                    </Typography>
-                    <Typography variant="body2">
-                      Time: {format(new Date(selectedBooking.startDateTime), 'h:mm a')}
-                    </Typography>
-                  </Box>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-                  Delete
-                </Button>
-              </DialogActions>
-            </Dialog>
           </StyledPaper>
         )}
         {activeTab === 4 && (
