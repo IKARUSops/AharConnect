@@ -108,11 +108,11 @@ exports.getRestaurantOrders = async (req, res) => {
     }
 
     console.log('[OrderController] Found restaurant:', {
-      restaurantId: restaurant._id,
+      restaurantId: restaurant.user,
       name: restaurant.name
     });
     
-    const orders = await Order.find({ restaurantId: req.params.restaurantId })
+    const orders = await Order.find({ restaurantId: restaurant.user })
       .populate('items.menuItem')
       .populate('userId')
       .sort({ createdAt: -1 });
