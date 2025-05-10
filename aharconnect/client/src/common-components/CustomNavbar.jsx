@@ -63,23 +63,25 @@ function CustomNavbar() {
                                     </Nav.Link>
                                 )}
 
-                                {/* Profile - For all logged-in users */}
-                                <Nav.Link 
-                                    as={Link} 
-                                    to={userType === 'restaurant' ? "/restaurant-profile" : "/foodie-profile"} 
-                                    className={location.pathname.includes('profile') ? 'active' : ''}
-                                >
-                                    Profile
-                                </Nav.Link>
-
-                                {/* Messages - For all logged-in users */}
-                                <Nav.Link 
-                                    as={Link} 
-                                    to="/messages" 
-                                    className={location.pathname === '/messages' ? 'active' : ''}
-                                >
-                                    Messages
-                                </Nav.Link>
+                                {/* Profile and Messages - Only for foodie users */}
+                                {userType === 'foodie' && (
+                                    <>
+                                        <Nav.Link 
+                                            as={Link} 
+                                            to="/foodie-profile" 
+                                            className={location.pathname === '/foodie-profile' ? 'active' : ''}
+                                        >
+                                            Profile
+                                        </Nav.Link>
+                                        <Nav.Link 
+                                            as={Link} 
+                                            to="/messages" 
+                                            className={location.pathname === '/messages' ? 'active' : ''}
+                                        >
+                                            Messages
+                                        </Nav.Link>
+                                    </>
+                                )}
 
                                 {/* Logout for all authenticated users */}
                                 <Nav.Link onClick={handleLogout} className="logout-link">
