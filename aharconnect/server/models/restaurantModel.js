@@ -100,9 +100,37 @@ const restaurantSchema = new mongoose.Schema({
   availableForEvents: {
     type: Boolean,
     default: false
-    }
+  }
 }, {
   timestamps: true
 });
-  
-module.exports = mongoose.model('Restaurant', restaurantSchema); 
+
+// Model methods
+restaurantSchema.statics.findByUserId = async function(userId) {
+  return this.findOne({ user: userId });
+};
+
+restaurantSchema.statics.createRestaurant = async function(restaurantData) {
+  const restaurant = new this(restaurantData);
+  return restaurant.save();
+};
+
+restaurantSchema.statics.updateRestaurant = async function(userId, updateData) {
+  return this.findOneAndUpdate(
+    { user: userId },
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+};
+
+restaurantSchema.statics.findActiveRestaurants = async function() {
+  return this.find({ isActive: true });
+};
+
+restaurantSchema.statics.findByCuisine = async function(cuisine) {
+  return this.find({ cuisine: cuisine, isActive: true });
+};
+
+const Restaurant = mongoose.model('Restaurant', restaurantSchema);
+
+module.exports = Restaurant; 

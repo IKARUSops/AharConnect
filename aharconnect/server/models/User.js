@@ -44,4 +44,32 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('User', userSchema);
+// Model methods
+userSchema.statics.findByEmail = async function(email) {
+  return this.findOne({ email });
+};
+
+userSchema.statics.findByEmailAndType = async function(email, type) {
+  return this.findOne({ email, type });
+};
+
+userSchema.statics.findByIdWithoutPassword = async function(id) {
+  return this.findById(id).select('-password');
+};
+
+userSchema.statics.updateProfile = async function(id, profileFields) {
+  return this.findByIdAndUpdate(
+    id,
+    { $set: profileFields },
+    { new: true }
+  ).select('-password');
+};
+
+userSchema.statics.createUser = async function(userData) {
+  const user = new this(userData);
+  return user.save();
+};
+
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;

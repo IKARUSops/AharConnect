@@ -95,12 +95,31 @@ exports.deleteRestaurant = async (req, res) => {
 // Get restaurant profile
 exports.getProfile = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findOne({ user: req.user._id });
+    console.log('[RestaurantController] Getting profile for user:', {
+      userId: req.user._id,
+      userType: req.user.type,
+      headers: req.headers
+    });
+
+    const restaurant = await Restaurant.findByUserId(req.user._id);
+    console.log('[RestaurantController] Restaurant lookup result:', {
+      found: !!restaurant,
+      restaurantId: restaurant?._id,
+      restaurantName: restaurant?.name
+    });
+
     if (!restaurant) {
+      console.log('[RestaurantController] No restaurant profile found for user:', req.user._id);
       return res.status(404).json({ error: 'Restaurant profile not found' });
     }
+
     res.json(restaurant);
   } catch (error) {
+    console.error('[RestaurantController] Error fetching restaurant profile:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id
+    });
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -120,28 +139,24 @@ exports.updateProfile = async (req, res) => {
       image
     } = req.body;
 
-    let restaurant = await Restaurant.findOne({ user: req.user._id });
+    let restaurant = await Restaurant.findByUserId(req.user._id);
 
     if (restaurant) {
       // Update existing profile
-      restaurant = await Restaurant.findOneAndUpdate(
-        { user: req.user._id },
-        {
-          name,
-          description,
-          address,
-          phone,
-          email,
-          openingHours,
-          cuisine,
-          capacity,
-          image
-        },
-        { new: true, upsert: true }
-      );
+      restaurant = await Restaurant.updateRestaurant(req.user._id, {
+        name,
+        description,
+        address,
+        phone,
+        email,
+        openingHours,
+        cuisine,
+        capacity,
+        image
+      });
     } else {
       // Create new profile
-      restaurant = new Restaurant({
+      restaurant = await Restaurant.createRestaurant({
         user: req.user._id,
         name,
         description,
@@ -153,12 +168,11 @@ exports.updateProfile = async (req, res) => {
         capacity,
         image
       });
-      await restaurant.save();
     }
 
     res.json(restaurant);
   } catch (error) {
-    console.error('Profile update error:', error);
+    console.error('[RestaurantController] Profile update error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -175,10 +189,11 @@ exports.uploadImage = async (req, res) => {
       return res.status(404).json({ error: 'Restaurant profile not found' });
     }
 
-    restaurant.image = req.file.path;
+    const photoUrl = `/uploads/restaurants/${req.file.filename}`;
+    restaurant.image = photoUrl;
     await restaurant.save();
 
-    res.json({ image: restaurant.image });
+    res.json({ image: photoUrl });
   } catch (error) {
     console.error('Image upload error:', error);
     res.status(500).json({ error: 'Server error' });

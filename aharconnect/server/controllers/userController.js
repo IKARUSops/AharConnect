@@ -3,7 +3,7 @@ const User = require('../models/User');
 // Get user profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findByIdWithoutPassword(req.user._id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -27,12 +27,8 @@ exports.updateProfile = async (req, res) => {
     if (address) profileFields.address = address;
     if (preferences) profileFields.preferences = preferences;
 
-    // Update user
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: profileFields },
-      { new: true }
-    ).select('-password');
+    // Update user using model method
+    const user = await User.updateProfile(req.user._id, profileFields);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

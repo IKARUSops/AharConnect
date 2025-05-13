@@ -12,7 +12,7 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Invalid user type' });
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findByEmail(email);
     if (exists) {
       console.log('Email already exists:', email);
       return res.status(400).json({ error: 'Email already in use' });
@@ -21,8 +21,12 @@ exports.signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     console.log('Password hashed successfully');
     
-    const newUser = new User({ name, email, password: hashedPassword, type });
-    await newUser.save();
+    const newUser = await User.createUser({ 
+      name, 
+      email, 
+      password: hashedPassword, 
+      type 
+    });
     console.log('User created successfully:', email);
 
     res.status(201).json({ message: 'User registered successfully' });
@@ -42,7 +46,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Invalid user type' });
     }
 
-    const user = await User.findOne({ email, type });
+    const user = await User.findByEmailAndType(email, type);
     console.log('User found:', user ? 'Yes' : 'No'); // Log if user was found
 
     if (!user) {
